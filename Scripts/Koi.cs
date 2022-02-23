@@ -129,6 +129,34 @@ public class Koi : UdonSharpBehaviour
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.green);
         }
     }
+
+    private void OnTriggerEnter(Collider collider)
+    {
+        if (collider.gameObject.name == "Water")
+        {
+            _rigidBody.useGravity = false;
+            _rigidBody.isKinematic = true;
+            //_collider.isTrigger = true;
+            _propBlock.SetFloat("_Speed", 5f);
+            gameObject.transform.position += new Vector3(0f, 0f, 0f);
+        }
+
+        if (collider.gameObject.name == "Food")
+        {
+            if (fishSize < 0.08f)
+            {
+                _food = collider.gameObject;
+                _foodSpawner.availableObjects.Return(_food);
+                fishSize += 0.01f;
+                speed += 0.2f;
+                transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+            }
+            else
+            {
+                ToggleFertility();
+            }
+    }
+    }
     public override void OnPickup()
     {
         if (!Networking.IsOwner(gameObject))
