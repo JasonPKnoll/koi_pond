@@ -132,6 +132,11 @@ public class Koi : UdonSharpBehaviour
 
     private void OnTriggerEnter(Collider collider)
     {
+        if (collider.gameObject.name == "Fire")
+        {
+            _cookFish.Cook(gameObject);
+        }
+
         if (collider.gameObject.name == "FishSwapper")
         {
             if (swappable == true)
