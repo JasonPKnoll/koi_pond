@@ -95,6 +95,14 @@ public class Koi : UdonSharpBehaviour
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.green);
         }
     }
+    public override void OnPickup()
+    {
+        if (!Networking.IsOwner(gameObject))
+        {
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        }
+    }
+
     void ChooseHeading()
     {
         heading = Quaternion.Euler(0.0f, Random.Range(0.0f, 360.0f), 0.0f);
