@@ -168,6 +168,18 @@ public class Koi : UdonSharpBehaviour
             }
     }
     }
+    
+    private void OnTriggerExit(Collider collider)
+    {
+        if (collider.gameObject.name == "Water")
+        {
+            _rigidBody.useGravity = true;
+            _rigidBody.isKinematic = false;
+            //_collider.isTrigger = false;
+            _propBlock.SetFloat("_Speed", 20f);
+        }
+    }
+
     }
     public override void OnPickup()
     {
