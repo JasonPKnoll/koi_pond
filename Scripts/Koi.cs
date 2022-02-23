@@ -132,6 +132,12 @@ public class Koi : UdonSharpBehaviour
 
     private void OnTriggerEnter(Collider collider)
     {
+        if (collider.gameObject.name == "FishSwapper")
+        {
+            if (swappable == true)
+                _fishSwapper.SwapFish(gameObject);
+        }
+
         if (collider.gameObject.name == "Water")
         {
             _rigidBody.useGravity = false;
@@ -155,6 +161,7 @@ public class Koi : UdonSharpBehaviour
             {
                 ToggleFertility();
             }
+    }
     }
     }
     public override void OnPickup()
