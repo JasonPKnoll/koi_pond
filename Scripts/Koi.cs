@@ -14,14 +14,43 @@ public class Koi : UdonSharpBehaviour
     private float lastDirectionChangeTime;
     private Quaternion heading;
 
+    private Renderer _renderer;
+    private MaterialPropertyBlock _propBlock;
+    private Rigidbody _rigidBody;
+    private Collider _collider;
+
     // For RayCasting
     private float rayDistance = 0.5f;
     public LayerMask mask;
     RaycastHit hit;
 
+    // Access to other Classes
+    [SerializeField]
+    CookFish _cookFish;
+    [SerializeField]
+    FishSwapper _fishSwapper;
+    [SerializeField]
+    FoodSpawner _foodSpawner;
+    [SerializeField]
+    FishSpawner _fishSpawner;
+    [SerializeField]
+    GameObject _food;
+
     void Start()
     {
         ChooseHeading();
+        speed = 0.2f;
+        transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+
+        _renderer = GetComponent<Renderer>();
+        _propBlock = new MaterialPropertyBlock();
+        _rigidBody = GetComponent<Rigidbody>();
+        _collider = GetComponent<Collider>();
+
+        _propBlock.SetColor("_Color", new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
+        _propBlock.SetColor("_Color2", new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
+
+        _renderer.SetPropertyBlock(_propBlock);
     }
 
     private void Update()
