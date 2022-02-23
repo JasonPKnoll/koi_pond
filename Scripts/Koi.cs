@@ -11,6 +11,9 @@ public class Koi : UdonSharpBehaviour
     public float speed = 0.0f;
     public float rotationSpeed = 1.0f;
     public float directionChangeInterval = 2.0f;
+    private bool fertility = false;
+    public float fishSize = 0.04f;
+    private bool swappable = false;
     private float lastDirectionChangeTime;
     private Quaternion heading;
 
@@ -180,6 +183,13 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    void ToggleFertility()
+    {
+        if (fertility == false)
+        {
+            fertility = true;
+        }
+    }
     }
     public override void OnPickup()
     {
@@ -187,6 +197,7 @@ public class Koi : UdonSharpBehaviour
         {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
         }
+        swappable = true;
     }
 
     void ChooseHeading()
