@@ -199,7 +199,27 @@ public class Koi : UdonSharpBehaviour
             fertility = true;
         }
     }
+
+    public void SpawnOutOfWater()
+    {
+        ChooseHeading();
+        speed = 0.2f;
+        swappable = false;
+        transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+
+        _renderer = GetComponent<Renderer>();
+        _propBlock = new MaterialPropertyBlock();
+        _rigidBody = GetComponent<Rigidbody>();
+        _collider = GetComponent<Collider>();
+
+        _rigidBody.useGravity = true;
+        _rigidBody.isKinematic = false;
+        _propBlock.SetColor("_Color", new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
+        _propBlock.SetColor("_Color2", new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
+
+        _renderer.SetPropertyBlock(_propBlock);
     }
+
     public override void OnPickup()
     {
         if (!Networking.IsOwner(gameObject))
