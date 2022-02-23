@@ -1,4 +1,5 @@
 
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -74,6 +75,26 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    void FoodRay()
+    {
+        Vector3 fwd = transform.TransformDirection(Vector3.forward);
+        if (Physics.Raycast(transform.position, fwd, 1))
+        {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.red);
+            var objectHit = hit.collider.gameObject;
+            if (objectHit.name == "Food")
+            {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.yellow);
+            }
+            else
+            {
+            }
+        }
+        else
+        {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.green);
+        }
+    }
     void ChooseHeading()
     {
         heading = Quaternion.Euler(0.0f, Random.Range(0.0f, 360.0f), 0.0f);
