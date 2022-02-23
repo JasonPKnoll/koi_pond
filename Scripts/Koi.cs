@@ -58,7 +58,16 @@ public class Koi : UdonSharpBehaviour
 
     private void Update()
     {
+        if (_rigidBody.useGravity == false)
+        {
         DrawRays();
+    }
+        if (transform.position.y < -10)
+        {
+            //_fishSpawner.spawnedObject = gameObject;
+            _fishSpawner.RespawnFromFall(gameObject);
+        }
+        //FoodRay();
     }
 
     void DrawRays()
