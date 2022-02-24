@@ -1,4 +1,4 @@
-
+﻿
 
 using UdonSharp;
 using UnityEngine;
@@ -60,8 +60,8 @@ public class Koi : UdonSharpBehaviour
     {
         if (_rigidBody.useGravity == false)
         {
-        DrawRays();
-    }
+            DrawRays();
+        }
         if (transform.position.y < -10)
         {
             //_fishSpawner.spawnedObject = gameObject;
@@ -178,7 +178,7 @@ public class Koi : UdonSharpBehaviour
             {
                 ToggleFertility();
             }
-    }
+        }
     }
     
     private void OnTriggerExit(Collider collider)
