@@ -120,63 +120,46 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
-    void FoodRay()
-    {
-        Vector3 fwd = transform.TransformDirection(Vector3.forward);
-        if (Physics.Raycast(transform.position, fwd, 1))
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.red);
-            var objectHit = hit.collider.gameObject;
-            if (objectHit.name == "Food")
-            {
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.yellow);
-            }
-            else
-            {
-            }
-        }
-        else
-        {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1, Color.green);
-        }
-    }
-
-    private void OnTriggerEnter(Collider collider)
-    {
-        if (collider.gameObject.name == "Fire")
-        {
+    private void OnTriggerEnter(Collider collider) {
+        if (collider.gameObject.name == "Fire") {
             _cookFish.Cook(gameObject);
         }
 
-        if (collider.gameObject.name == "FishSwapper")
-        {
-            if (swappable == true)
+        if (collider.gameObject.name == "FishSwapper") {
+            if (swappable == true) {
                 _fishSwapper.SwapFish(gameObject);
+            }
         }
 
-        if (collider.gameObject.name == "Water")
-        {
-            _rigidBody.useGravity = false;
-            _rigidBody.isKinematic = true;
-            //_collider.isTrigger = true;
-            _propBlock.SetFloat("_Speed", 5f);
+        if (collider.gameObject.name == "Water") {
+            outOfWater = false;
+            sync.SetGravity(false);
+            sync.SetKinematic(true);
+            _propBlock.SetFloat("_Speed", 5f); // Not working
             gameObject.transform.position += new Vector3(0f, 0f, 0f);
         }
 
-        if (collider.gameObject.name == "Food")
-        {
-            if (fishSize < 0.08f)
-            {
-                _food = collider.gameObject;
-                _foodSpawner.availableObjects.Return(_food);
-                fishSize += 0.01f;
-                speed += 0.2f;
-                transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+        if (collider.gameObject.name == "Food") {
+            EatFood(collider.gameObject);
+        }
+        if (collider.gameObject.name == "FriedKoi") {
+            EatFood(collider.gameObject);
+        }
+    }
+
+    private void EatFood(GameObject food) {
+        if (fishSize < 0.08f) {
+            _food = food.gameObject.GetComponent<Food>();
+            if (_food.name == "Food") {
+                _foodSpawner.availableObjects.Return(_food.gameObject);
+            } else {
+                _cookFish.availableObjects.Return(food.gameObject);
             }
-            else
-            {
-                ToggleFertility();
-            }
+            fishSize += 0.01f;
+            speed += 0.2f;
+            transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+            RequestSerialization();
+        } else {
         }
     }
     
