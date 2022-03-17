@@ -48,36 +48,32 @@ public class Food : UdonSharpBehaviour
 
 
 
-        jiggle();
-        if (Time.time > lastMovementChangeTime + movementChangeInterval )
-        {
-            changeDirection();
-            lastMovementChangeTime = Time.time;
+    void Update() {
+        if (gameObject.activeSelf == false) {
+            ResetSpawnPosition();
         }
-
+        if (_rigidBody.useGravity == false) {
+            jiggle();
+            if (Time.time > lastMovementChangeTime + movementChangeInterval ) {
+                changeDirection();
+                lastMovementChangeTime = Time.time;
+            }
+        }
     }
 
-    public void changeDirection()
-    {
-        if (isUp == true)
-        {
+    public void changeDirection() {
+        if (isUp == true) {
             isUp = false;
-        }
-        else
-        {
+        } else {
             isUp = true;
         }
         lastMovementChangeTime = Time.time;
     }
 
-    public void jiggle()
-    {
-        if (isUp == true)
-        {
+    public void jiggle() {
+        if (isUp == true) {
             transform.position += new Vector3(0, positionY, 0) * Time.deltaTime;
-        }
-        else
-        {
+        } else {
             transform.position -= new Vector3(0, positionY, 0) * Time.deltaTime;
         }
     }
