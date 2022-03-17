@@ -1,4 +1,4 @@
-
+﻿
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
@@ -48,6 +48,18 @@ public class Food : UdonSharpBehaviour
 
 
 
+    public void OnEnable() {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        ResetSpawnPosition();
+        if (gameObject.name.StartsWith("Foo")) {
+            sync.SetKinematic(true);
+            sync.SetGravity(false);
+        } else {
+            sync.SetKinematic(false);
+            sync.SetGravity(true);
+        }
+    }
+
     void Update() {
         if (gameObject.activeSelf == false) {
             ResetSpawnPosition();
@@ -78,56 +90,48 @@ public class Food : UdonSharpBehaviour
         }
     }
 
-    public override void OnPickup()
-    {
-        if (!Networking.IsOwner(gameObject))
-        {
+    public override void OnPickup() {
+        if (!Networking.IsOwner(gameObject)) {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
         }
-        //SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "turnONorOFF");
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        sync.SetGravity(true);
+        sync.SetKinematic(false);
     }
 
-    public override void OnDrop()
-    {
-        _rigidBody.isKinematic = false;
-        _rigidBody.useGravity = true;
+    public override void OnDrop() {
+        if (!Networking.IsOwner(gameObject)) {
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        }
+
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        sync.SetGravity(true);
+        sync.SetKinematic(false);
     }
 
-    //public override void Interact()
-    //{
-    //    if (!Networking.IsOwner(gameObject))
-    //    {
-    //        Networking.SetOwner(Networking.LocalPlayer, gameObject);
-    //    }
-    //    SendCustomNetworkEvent(VRC.Udon.Common.Interfaces.NetworkEventTarget.All, "turnONorOFF");
-    //}
-
-    //public void turnONorOFF()
-    //{
-    //isON = !food.activeSelf;
-    //food.SetActive(isON);
-    //}
-
-    private void OnTriggerEnter(Collider collider)
-    {
-        if (collider.gameObject.name == "Water")
-        {
-            _rigidBody.useGravity = false;
-            _rigidBody.isKinematic = true;
+    private void OnTriggerEnter(Collider collider) {
+        if (collider.gameObject.name == "Water") {
+            sync.SetGravity(false);
+            sync.SetKinematic(true);
         }    
     }
 
-    private void OnTriggerExit(Collider collider)
-    {
-        if (collider.gameObject.name == "Water")
-        {
-            _rigidBody.useGravity = true;
-            _rigidBody.isKinematic = false;
+    private void OnTriggerExit(Collider collider) {
+        if (collider.gameObject.name == "Water") {
+            sync.SetGravity(true);
+            sync.SetKinematic(false);
         }
     }
 
-    public override void OnDeserialization()
-    {
-        //gameObject.SetActive(isON);
+    public void ResetSpawnPosition() {
+        if (gameObject.name.StartsWith("Foo")) {
+            gameObject.transform.position = _foodspawner.transform.position + spawnOffset;
+        } else {
+            gameObject.transform.position = _cookFish.transform.position + spawnOffset;
+        }
+
+    }
+
+    public override void OnDeserialization() {
     }
 }
