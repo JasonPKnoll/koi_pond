@@ -1,6 +1,7 @@
-﻿
+
 using UdonSharp;
 using UnityEngine;
+using VRC.SDK3.Components;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -9,19 +10,44 @@ public class Food : UdonSharpBehaviour
     public float movementChangeInterval = 1.5f;
     private float lastMovementChangeTime;
     private bool isUp = true;
+    public Vector3 spawnOffset = new Vector3 (0f, 0.2f, 0f); 
     public float positionY = 0.03f;
 
+    private VRCObjectSync sync;
     private Rigidbody _rigidBody;
+    public FoodSpawner _foodspawner;
+    public CookFish _cookFish;
 
-    [UdonSynced] bool isON;
-    void Start()
-    {
-        gameObject.name = "Food";
+    [UdonSynced] public Vector3 spawnLocation;
+    public Vector3 _spawnLocation;
+
+    void Start() {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        if (gameObject.name.StartsWith("Foo")) {
+            gameObject.name = "Food";
+            FirstSpawn(true, false);
+        } else {
+            gameObject.name = "FriedKoi";
+            FirstSpawn(false, true);
+        }
         _rigidBody = GetComponent<Rigidbody>();
     }
 
-    void Update()
-    {
+    private void FirstSpawn(bool kinematic, bool gravity) {
+        if (_cookFish) {
+            gameObject.transform.position = _cookFish.transform.position + spawnOffset;
+        } else {
+            gameObject.transform.position = _foodspawner.transform.position + spawnOffset;
+        }
+        if (Networking.IsOwner(Networking.LocalPlayer, gameObject))
+        {
+            sync.SetKinematic(kinematic);
+            sync.SetGravity(gravity);
+        }
+    }
+
+
+
         jiggle();
         if (Time.time > lastMovementChangeTime + movementChangeInterval )
         {

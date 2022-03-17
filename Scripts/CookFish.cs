@@ -9,6 +9,9 @@ public class CookFish : UdonSharpBehaviour
 {
 
     private float fishSize;
+    private VRCObjectSync sync;
+
+    private Rigidbody _rigidBody;
 
     [SerializeField]
     public VRCObjectPool availableObjects;
@@ -22,7 +25,8 @@ public class CookFish : UdonSharpBehaviour
 
     void Start()
     {
-        
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        _rigidBody = GetComponent<Rigidbody>();
     }
 
     public void Cook(GameObject fish)

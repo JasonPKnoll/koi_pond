@@ -1,5 +1,4 @@
-﻿
-using UdonSharp;
+﻿using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
@@ -12,8 +11,11 @@ public class FishSpawner : UdonSharpBehaviour
     public VRCObjectPool availableObjects;
     public GameObject spawnedObject;
 
+    private VRCObjectSync sync;
+
     void Start()
     {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         SpawnTen();
     }
 
@@ -28,12 +30,6 @@ public class FishSpawner : UdonSharpBehaviour
 
     public void RespawnFromFall(GameObject fallenObject)
     {
-
-        //for (int i = 0; i < availableObjects.Pool.Length; i++)
-        //{
-        //if (availableObjects.Pool[i].name == fallenObject)
-        //spawnedObject = availableObjects.Pool[i];
-        //}
         spawnedObject = fallenObject;
         spawnedObject.transform.position = transform.position + new Vector3(0f, 10f, 0f);
     }    
