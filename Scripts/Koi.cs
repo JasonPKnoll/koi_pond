@@ -1,4 +1,4 @@
-
+﻿
 
 using UdonSharp;
 using UnityEngine;
@@ -64,33 +64,27 @@ public class Koi : UdonSharpBehaviour
 
     void Start()
     {
-        ChooseHeading();
-        speed = 0.2f;
-        transform.localScale = new Vector3(fishSize, fishSize, fishSize);
-
-        _renderer = GetComponent<Renderer>();
-        _propBlock = new MaterialPropertyBlock();
-        _rigidBody = GetComponent<Rigidbody>();
-        _collider = GetComponent<Collider>();
-
-        _propBlock.SetColor("_Color", new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
-        _propBlock.SetColor("_Color2", new Color(Random.Range(0f, 1f), Random.Range(0f, 1f), Random.Range(0f, 1f)));
-
-        _renderer.SetPropertyBlock(_propBlock);
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        if (outOfWater == false)
+            CreateNewKoi(false, true); // Possibly redundent
+            ChooseHeading();
     }
 
-    private void Update()
+    public void OnEnable()
     {
-        if (_rigidBody.useGravity == false)
-        {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        if (outOfWater == false)
+            CreateNewKoi(false, true);
+            ChooseHeading();
+    }
+
+    private void Update() {
+        if (_rigidBody.useGravity == false) {
             DrawRays();
         }
-        if (transform.position.y < -10)
-        {
-            //_fishSpawner.spawnedObject = gameObject;
+        if (transform.position.y < -10) {
             _fishSpawner.RespawnFromFall(gameObject);
         }
-        //FoodRay();
     }
 
     void DrawRays() {
@@ -186,23 +180,20 @@ public class Koi : UdonSharpBehaviour
         }
     }
     
-    private void OnTriggerExit(Collider collider)
-    {
-        if (collider.gameObject.name == "Water")
-        {
-            _rigidBody.useGravity = true;
-            _rigidBody.isKinematic = false;
-            //_collider.isTrigger = false;
+    private void OnTriggerExit(Collider collider) {
+        if (collider.gameObject.name == "Water") {
+            outOfWater = true;
+            sync.SetGravity(true);
+            sync.SetKinematic(false);
             _propBlock.SetFloat("_Speed", 20f);
         }
     }
 
-    void ToggleFertility()
-    {
-        if (fertility == false)
-        {
-            fertility = true;
-        }
+    public void SpawnOutOfWater() {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        if (!Networking.IsOwner(gameObject))
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        CreateNewKoi(true, false);
     }
 
     public void CreateNewKoi(bool gravity, bool kinematic) {
@@ -235,19 +226,20 @@ public class Koi : UdonSharpBehaviour
         RequestSerialization();
     }    
 
-    public override void OnPickup()
-    {
-        if (!Networking.IsOwner(gameObject))
-        {
+    public override void OnPickup() {
+        if (!Networking.IsOwner(gameObject)) {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
         }
         swappable = true;
     }
 
-    void ChooseHeading()
-    {
-        heading = Quaternion.Euler(0.0f, Random.Range(0.0f, 360.0f), 0.0f);
-        lastDirectionChangeTime = Time.time;
+    void ChooseHeading() {
+        if(Networking.IsOwner(Networking.LocalPlayer, gameObject)) {
+            heading = Quaternion.Euler(0.0f, Random.Range(0.0f, 360.0f), 0.0f);
+            lastDirectionChangeTime = Time.time;
+        }
+    }
+
     public override void OnDeserialization() {
         if (r != _r || b != _b || b2 != _b2 || g2 != _g2) {
             syncNewFish();
