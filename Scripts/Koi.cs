@@ -1,4 +1,4 @@
-﻿
+
 
 using UdonSharp;
 using UnityEngine;
@@ -70,36 +70,35 @@ public class Koi : UdonSharpBehaviour
         //FoodRay();
     }
 
-    void DrawRays()
-    {
-        if (gameObject.transform.eulerAngles.y != 0f)
-        {
-            gameObject.transform.position += Vector3.up * 0;
+    void DrawRays() {
+        // swim towards y position 0
+        if (-0.01f <= transform.position.y && transform.position.y >= 0.1f) {
+            Vector3 target = new Vector3(transform.position.x, 0.0f, transform.position.z);
+            transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
         }
+
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
         Vector3 left = transform.TransformDirection(Vector3.left);
 
-        if (Physics.Raycast(transform.position, fwd, rayDistance, mask))
-        {
-            if (Physics.Raycast(transform.position, right, rayDistance, mask))
-            {
+        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            if (Physics.Raycast(transform.position, right, rayDistance, mask)) {
                 Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.red);
-                if (Physics.Raycast(transform.position, left, rayDistance, mask))
-                {
+
+                // If left path not clear draw raycast as red
+                if (Physics.Raycast(transform.position, left, rayDistance, mask)) {
                     Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.red);
-                }
-                else
-                {
+
+                // Check left and move left if path is clear
+                } else {
                     heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
                     transform.Rotate(0, -90 * Time.deltaTime, 0);
 
                     Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.green);
                 }
-            }
-            else
-            {
 
+            // Check right and move right if path is clear
+            } else {
                 heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
                 transform.Rotate(0, 90 * Time.deltaTime, 0);
 
@@ -107,15 +106,15 @@ public class Koi : UdonSharpBehaviour
             }
 
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * rayDistance, Color.red);
-        }
-        else
-        {
+
+        // if raycast forward is good continue as normal
+        } else {
             transform.rotation = Quaternion.Lerp(transform.rotation, heading, Time.deltaTime * rotationSpeed);
             transform.position += transform.forward * speed * Time.deltaTime;
 
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * rayDistance, Color.green);
-            if (Time.time > lastDirectionChangeTime + directionChangeInterval)
-            {
+
+            if (Time.time > lastDirectionChangeTime + directionChangeInterval) {
                 ChooseHeading();
             }
         }
