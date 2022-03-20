@@ -98,34 +98,8 @@ public class Koi : UdonSharpBehaviour
         Vector3 right = transform.TransformDirection(Vector3.right);
         Vector3 left = transform.TransformDirection(Vector3.left);
 
-        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
-            if (Physics.Raycast(transform.position, right, rayDistance, mask)) {
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.red);
 
-                // If left path not clear draw raycast as red
-                if (Physics.Raycast(transform.position, left, rayDistance, mask)) {
-                    Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.red);
-
-                // Check left and move left if path is clear
-                } else {
-                    heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
-                    transform.Rotate(0, -90 * Time.deltaTime, 0);
-
-                    Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.green);
-                }
-
-            // Check right and move right if path is clear
-            } else {
-                heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
-                transform.Rotate(0, 90 * Time.deltaTime, 0);
-
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.green);
-            }
-
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * rayDistance, Color.red);
-
-        // if raycast forward is good continue as normal
-        } else {
+        if (!Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
             transform.rotation = Quaternion.Lerp(transform.rotation, heading, Time.deltaTime * rotationSpeed);
             transform.position += transform.forward * speed * Time.deltaTime;
 
@@ -134,6 +108,39 @@ public class Koi : UdonSharpBehaviour
             if (Time.time > lastDirectionChangeTime + directionChangeInterval) {
                 ChooseHeading();
             }
+        }
+
+        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * rayDistance, Color.red);
+            TryRight(right, left);
+            //TryLeft(left, right);
+        }
+    }
+
+    void TryRight(Vector3 right, Vector3 left) {
+        if (!Physics.Raycast(transform.position, right, rayDistance, mask)) {
+            heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
+            transform.Rotate(0, 90 * Time.deltaTime, 0);
+
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.green);
+        }
+        if (Physics.Raycast(transform.position, right, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.red);
+            TryLeft(left, right);
+        }
+
+    }
+
+    void TryLeft(Vector3 left, Vector3 right) {
+        if (!Physics.Raycast(transform.position, left, rayDistance, mask)) {
+            heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
+            transform.Rotate(0, -90 * Time.deltaTime, 0);
+
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.green);
+        }
+        if (Physics.Raycast(transform.position, left, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.red);
+            TryRight(right, left);
         }
     }
 
