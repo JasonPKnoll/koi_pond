@@ -1,4 +1,4 @@
-
+﻿
 
 using UdonSharp;
 using UnityEngine;
@@ -9,13 +9,16 @@ using VRC.Udon;
 
 public class Koi : UdonSharpBehaviour
 {
-    public float rotationSpeed = 1.0f;
-    public float directionChangeInterval = 2.0f;
+    private float rotationSpeed = 1.0f;
+    private float directionChangeInterval = 2.0f;
     private bool swappable = false;
     public bool outOfWater = false;
+    public GameObject target; 
 
     [UdonSynced] public float speed = 0.0f;
     [UdonSynced] public float fishSize = 0.04f;
+    private float _speed = 0.0f;
+    private float _fishSize = 0.04f;
 
     // Color Values
     [UdonSynced] public float r = 0f, g = 0f, b = 0f;
@@ -120,7 +123,6 @@ public class Koi : UdonSharpBehaviour
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.red);
             TryLeft(left, right);
         }
-
     }
 
     void TryLeft(Vector3 left, Vector3 right) {
@@ -205,6 +207,16 @@ public class Koi : UdonSharpBehaviour
             RespawnFood(_food);
         }
     }
+
+    private void RespawnFood(Food _food) {
+        if (_food.name == "Food" || _food.name == "In Water Food") {
+            _food.name = "Food";
+            _food.inWater = false;
+            _foodSpawner.availableObjects.Return(_food.gameObject);
+        } else {
+            _food.name = "FriedKoi";
+            _food.inWater = false;
+            _cookFish.availableObjects.Return(_food.gameObject);
         }
     }
     
@@ -268,16 +280,17 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    // FOR PLAYER SYNCHRONIZATION
     public override void OnDeserialization() {
         if (r != _r || b != _b || b2 != _b2 || g2 != _g2) {
             syncNewFish();
         }
         if (fishSize != _fishSize) {
-            syncFishGrowwth();
+            syncFishGrowth();
         }
     }
 
-    void syncFishGrowwth() {
+    void syncFishGrowth() {
         _fishSize = fishSize;
         _speed = speed;
         transform.localScale = new Vector3(fishSize, fishSize, fishSize);
