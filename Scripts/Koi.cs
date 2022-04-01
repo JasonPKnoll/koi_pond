@@ -1,4 +1,4 @@
-﻿
+
 
 using UdonSharp;
 using UnityEngine;
@@ -17,24 +17,11 @@ public class Koi : UdonSharpBehaviour
     [UdonSynced] public float speed = 0.0f;
     [UdonSynced] public float fishSize = 0.04f;
 
-    [UdonSynced] public float r = 0f;
-    [UdonSynced] public float g = 0f;
-    [UdonSynced] public float b = 0f;
-
-    [UdonSynced] public float r2 = 0f;
-    [UdonSynced] public float g2 = 0f;
-    [UdonSynced] public float b2 = 0f;
-
-    public float _speed = 0.0f;
-    public float _fishSize = 0.04f;
-
-    public float _r = 0f;
-    public float _g = 0f;
-    public float _b = 0f;
-                 
-    public float _r2 = 0f;
-    public float _g2 = 0f;
-    public float _b2 = 0f;
+    // Color Values
+    [UdonSynced] public float r = 0f, g = 0f, b = 0f;
+    [UdonSynced] public float r2 = 0f, g2 = 0f, b2 = 0f;
+    private float _r = 0f, _g = 0f, _b = 0f;
+    private float _r2 = 0f, _g2 = 0f, _b2 = 0f;
 
     private float lastDirectionChangeTime;
 
@@ -48,6 +35,10 @@ public class Koi : UdonSharpBehaviour
     private Collider _collider;
     [SerializeField] 
     MaterialPropertyBlock _propBlock;
+
+    // State Machine
+    public const byte fishSwimming = 1, fishTurningLeft = 2, fishTuringRight = 3, 
+        fishResting = 4, seekingFood = 5, seekingMate = 6;
 
     // For RayCasting
     private float rayDistance = 0.5f;
@@ -262,13 +253,10 @@ public class Koi : UdonSharpBehaviour
         transform.localScale = new Vector3(fishSize, fishSize, fishSize);
     }
 
+
     void syncNewFish() {
-        _r = r;
-        _b = b;
-        _g = g;
-        _r2 = r2;
-        _b2 = b2;
-        _g2 = g2;
+        _r = r; _b = b; _g = g;
+        _r2 = r2; _b2 = b2; _g2 = g2;
 
         speed = 0.2f;
         fishSize = 0.04f;
