@@ -32,7 +32,7 @@ public class Koi : UdonSharpBehaviour
 
     private Renderer _renderer;
     private Rigidbody _rigidBody;
-    private Collider _collider;
+    public Collider _collider;
     [SerializeField] 
     MaterialPropertyBlock _propBlock;
 
@@ -43,7 +43,7 @@ public class Koi : UdonSharpBehaviour
     // For RayCasting
     private float rayDistance = 0.5f;
     public LayerMask mask;
-    RaycastHit hit;
+    private LayerMask foodMask = 0;
 
     // Access to other Classes
     [SerializeField] CookFish _cookFish;
@@ -53,16 +53,15 @@ public class Koi : UdonSharpBehaviour
     [SerializeField] Food _food;
 
 
-    void Start()
-    {
+    void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        //pickupMask = LayerMask.GetMask("Pickup");
         if (outOfWater == false)
             CreateNewKoi(false, true); // Possibly redundent
             ChooseHeading();
     }
 
-    public void OnEnable()
-    {
+    public void OnEnable() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         if (outOfWater == false)
             CreateNewKoi(false, true);
@@ -70,7 +69,9 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void Update() {
-        if (_rigidBody.useGravity == false) {
+        if (target) {
+            MoveToTarget();
+        } else if (_rigidBody.useGravity == false) {
             DrawRays();
         }
         if (transform.position.y < -10) {
@@ -94,7 +95,7 @@ public class Koi : UdonSharpBehaviour
             transform.rotation = Quaternion.Lerp(transform.rotation, heading, Time.deltaTime * rotationSpeed);
             transform.position += transform.forward * speed * Time.deltaTime;
 
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * rayDistance, Color.green);
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.green);
 
             if (Time.time > lastDirectionChangeTime + directionChangeInterval) {
                 ChooseHeading();
@@ -102,7 +103,7 @@ public class Koi : UdonSharpBehaviour
         }
 
         if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * rayDistance, Color.red);
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
             TryRight(right, left);
             //TryLeft(left, right);
         }
@@ -135,6 +136,35 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    public void SetTarget(GameObject new_target) {
+        target = new_target;
+    }
+
+    public void MoveToTarget() {
+        TryToEat();
+
+        Quaternion lookAtLocation = Quaternion.LookRotation(target.transform.position - transform.position);
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookAtLocation, rotationSpeed * 3f * Time.deltaTime);
+        if (Vector3.Distance(transform.position, target.transform.position) > 0.1f) {
+            transform.position += transform.forward * speed * 1.2f * Time.deltaTime;
+        } else {
+            transform.position = Vector3.Lerp(transform.position, target.transform.position, speed * Time.deltaTime);
+        }
+
+        if (!target.name.StartsWith("In Water") || target.activeSelf == false) {
+            target = null;
+        }
+    }
+
+    private void TryToEat() {
+        Debug.DrawRay(transform.position, (target.transform.position - transform.position).normalized * 0.5f, Color.cyan);
+        float distance = Vector3.Distance(transform.position, target.transform.position);
+        if (distance < 0.12f) {
+            EatFood(target.gameObject);
+        }
+    }
+
     private void OnTriggerEnter(Collider collider) {
         if (collider.gameObject.name == "Fire") {
             _cookFish.Cook(gameObject);
@@ -150,7 +180,7 @@ public class Koi : UdonSharpBehaviour
             outOfWater = false;
             sync.SetGravity(false);
             sync.SetKinematic(true);
-            _propBlock.SetFloat("_Speed", 5f); // Not working
+            //_propBlock.SetFloat("_Speed", 5f); // Not working
             gameObject.transform.position += new Vector3(0f, 0f, 0f);
         }
 
@@ -165,16 +195,16 @@ public class Koi : UdonSharpBehaviour
     private void EatFood(GameObject food) {
         if (fishSize < 0.08f) {
             _food = food.gameObject.GetComponent<Food>();
-            if (_food.name == "Food") {
-                _foodSpawner.availableObjects.Return(_food.gameObject);
-            } else {
-                _cookFish.availableObjects.Return(food.gameObject);
-            }
+            RespawnFood(_food);
             fishSize += 0.01f;
             speed += 0.2f;
             transform.localScale = new Vector3(fishSize, fishSize, fishSize);
             RequestSerialization();
         } else {
+            _food = food.gameObject.GetComponent<Food>();
+            RespawnFood(_food);
+        }
+    }
         }
     }
     
