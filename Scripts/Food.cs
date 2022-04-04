@@ -13,8 +13,7 @@ public class Food : UdonSharpBehaviour
     public bool inWater = false;
     public Vector3 spawnOffset = new Vector3 (0f, 0.2f, 0f); 
     public float positionY = 0.03f;
-    private float fishSearchFrequency = 5f;
-    private float lastFishSearch;
+    private int fishSeeking = 0;
 
     private VRCObjectSync sync;
     private Rigidbody _rigidBody;
@@ -24,14 +23,14 @@ public class Food : UdonSharpBehaviour
     public LayerMask mask;
     public int fishMask = 1 << 23;
 
-    private Koi[] allFish;
+    public const byte Swimming = 1, OutOfWater = 2, AvoidingLeft = 3, AvoidingRight = 4,
+    Resting = 5, SeekingFood = 6, SeekingMate = 7;
 
     [UdonSynced] public Vector3 spawnLocation;
     public Vector3 _spawnLocation;
 
     void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-        allFish = _fishspawner.transform.GetComponentsInChildren<Koi>(true);
 
         if (gameObject.name.StartsWith("Foo")) {
             gameObject.name = "Food";
@@ -60,6 +59,7 @@ public class Food : UdonSharpBehaviour
     public void OnEnable() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         ResetSpawnPosition();
+        fishSeeking = 0;
         if (gameObject.name.StartsWith("Foo")) {
             sync.SetKinematic(true);
             sync.SetGravity(false);
@@ -80,24 +80,20 @@ public class Food : UdonSharpBehaviour
             }
         }
         if (inWater == true) {
-            //if (Time.time > lastFishSearch + fishSearchFrequency) {
-                findNearbyFish();
-                Debug.Log("Food it layer: " + gameObject.layer);
-                lastFishSearch = Time.time;
-            //}
+            findNearbyFish();
         }
     }
 
     public void findNearbyFish() {
         Collider[]hitColliders = Physics.OverlapSphere(transform.position, 2f, fishMask);
         foreach (var hitCollider in hitColliders) {
-            Debug.Log("Hit" + hitCollider.name);
-            if (hitCollider.name.StartsWith("koi")) {
+            if (hitCollider.name.StartsWith("koi") && fishSeeking <= 2) {
                 var fish = hitCollider.gameObject.GetComponent<Koi>();
                 fish.SetTarget(gameObject);
+                fish.currentState = SeekingFood;
+                fishSeeking += 1;
             }
         }
-        lastFishSearch = Time.time;
     }
 
     public bool checkFishViability(Koi fish) {
@@ -167,6 +163,7 @@ public class Food : UdonSharpBehaviour
         if (collider.gameObject.name == "Water") {
             gameObject.name = gameObject.name.Remove(0, 9);
             inWater = false;
+            fishSeeking = 0;
             sync.SetGravity(true);
             sync.SetKinematic(false);
         }

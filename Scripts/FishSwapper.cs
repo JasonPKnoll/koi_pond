@@ -10,17 +10,17 @@ public class FishSwapper : UdonSharpBehaviour
     private VRCObjectSync sync;
     private Rigidbody _rigidBody;
 
+    private const byte  OutOfWater = 2;
+
     [SerializeField] FishSpawner _fishSpawner;
     [SerializeField] GameObject _fish;
     [SerializeField] Koi _koi;
 
-    void Start()
-    {
+    void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
     }
 
-    public void OnEnable()
-    {
+    public void OnEnable() {
         //sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
     }
 
@@ -28,11 +28,12 @@ public class FishSwapper : UdonSharpBehaviour
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         if (!Networking.IsOwner(gameObject))
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        _fishSpawner.availableObjects.Return(fish);
+        _fish = fish;
+        _fishSpawner.availableObjects.Return(_fish);
         fish = _fishSpawner.availableObjects.TryToSpawn();
         _koi = fish.GetComponent<Koi>();
         _koi.SpawnOutOfWater();
-        _koi.outOfWater = true;
+        _koi.currentState = OutOfWater;
         fish.transform.position = transform.position + new Vector3(0, 0.50f, 0);
         _koi.RequestSerialization();
     }
