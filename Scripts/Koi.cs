@@ -1,5 +1,4 @@
-
-
+﻿
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -10,9 +9,7 @@ using VRC.Udon;
 public class Koi : UdonSharpBehaviour
 {
     private float rotationSpeed = 1.0f;
-    private float directionChangeInterval = 2.0f;
     private bool swappable = false;
-    public bool outOfWater = false;
     public GameObject target; 
 
     [UdonSynced] public float speed = 0.0f;
@@ -26,7 +23,13 @@ public class Koi : UdonSharpBehaviour
     public float _r = 0f, _g = 0f, _b = 0f;
     public float _r2 = 0f, _g2 = 0f, _b2 = 0f;
 
+    // Intervals
+    private float directionChangeInterval = 2.0f;
+    private float restTime = 8f;
+
+    // Timers
     private float lastDirectionChangeTime;
+    private float startRestTime;
 
     private VRCObjectSync sync;
 
@@ -40,8 +43,11 @@ public class Koi : UdonSharpBehaviour
     MaterialPropertyBlock _propBlock;
 
     // State Machine
-    public const byte fishSwimming = 1, fishTurningLeft = 2, fishTuringRight = 3, 
-        fishResting = 4, seekingFood = 5, seekingMate = 6;
+    // Enum is not compatible with Udon
+    public const byte Swimming = 1, OutOfWater = 2, AvoidingLeft = 3, AvoidingRight = 4,
+        Resting = 5, SeekingFood = 6, SeekingMate = 7;
+    public byte currentState;
+    public byte _currentState;
 
     // For RayCasting
     private float rayDistance = 0.5f;
@@ -54,36 +60,55 @@ public class Koi : UdonSharpBehaviour
     [SerializeField] FoodSpawner _foodSpawner;
     [SerializeField] FishSpawner _fishSpawner;
     [SerializeField] Food _food;
-
+    [SerializeField] KoiColor _koiColor;
 
     void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-        //pickupMask = LayerMask.GetMask("Pickup");
-        if (outOfWater == false)
-            CreateNewKoi(false, true); // Possibly redundent
-            ChooseHeading();
     }
 
     public void OnEnable() {
-        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-        if (outOfWater == false)
+        //sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        if (currentState == OutOfWater) {
+            sync.SetGravity(true);
+            sync.SetKinematic(false);
+        } else {
             CreateNewKoi(false, true);
             ChooseHeading();
+        }
     }
 
     private void Update() {
-        if (target) {
-            MoveToTarget();
-        } else if (_rigidBody.useGravity == false) {
-            DrawRays();
+
+        switch (currentState) {
+            case Swimming:
+                UpdateSwimming();
+                break;
+            case OutOfWater:
+                UpdateOutOfWater();
+                break;
+            case AvoidingLeft:
+                UpdateAvoidingLeft();
+                break;
+            case AvoidingRight:
+                UpdateAvoidingRight();
+                break;
+            case Resting:
+                UpdateResting();
+                break;
+            case SeekingFood:
+                UpdateSeekingFood();
+                break;
+            case SeekingMate:
+                UpdateSeekingMate();
+                break;
         }
+
         if (transform.position.y < -10) {
             _fishSpawner.RespawnFromFall(gameObject);
         }
     }
 
-    void DrawRays() {
-        // swim towards y position 0
+    private void UpdateSwimming() {
         if (-0.01f <= transform.position.y && transform.position.y >= 0.1f) {
             Vector3 target = new Vector3(transform.position.x, 0.0f, transform.position.z);
             transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
@@ -107,42 +132,83 @@ public class Koi : UdonSharpBehaviour
 
         if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
             Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
-            TryRight(right, left);
-            //TryLeft(left, right);
+            float roll = Random.Range(0f, 1f);
+           
+            if (roll >= 0.90f) {
+                startRestTime = Time.time;
+                currentState = Resting;
+            } else if (roll >= 0.45f) {
+                currentState = AvoidingLeft;
+            } else {
+                currentState = AvoidingRight;
+            }
         }
     }
+    private void UpdateOutOfWater() {
+    }
+    private void UpdateAvoidingLeft() {
+        Vector3 fwd = transform.TransformDirection(Vector3.forward);
+        Vector3 right = transform.TransformDirection(Vector3.right);
+        Vector3 left = transform.TransformDirection(Vector3.left);
 
-    void TryRight(Vector3 right, Vector3 left) {
+        if (!Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            currentState = Swimming;
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.green);
+        }
+
+        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
+        }
+
+        if (!Physics.Raycast(transform.position, left, rayDistance, mask)) {
+        heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
+        transform.Rotate(0, -90 * Time.deltaTime, 0);
+
+        Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.green);
+        }
+        if (Physics.Raycast(transform.position, left, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.red);
+            currentState = AvoidingRight;
+        }
+    }
+    private void UpdateAvoidingRight() {
+        Vector3 fwd = transform.TransformDirection(Vector3.forward);
+        Vector3 right = transform.TransformDirection(Vector3.right);
+        Vector3 left = transform.TransformDirection(Vector3.left);
+
+        if (!Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            currentState = Swimming;
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.green);
+        }
+
+        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
+        }
+
         if (!Physics.Raycast(transform.position, right, rayDistance, mask)) {
             heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
             transform.Rotate(0, 90 * Time.deltaTime, 0);
 
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.green);
         }
+
         if (Physics.Raycast(transform.position, right, rayDistance, mask)) {
             Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.red);
-            TryLeft(left, right);
+            currentState = AvoidingLeft;
         }
     }
-
-    void TryLeft(Vector3 left, Vector3 right) {
-        if (!Physics.Raycast(transform.position, left, rayDistance, mask)) {
-            heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
-            transform.Rotate(0, -90 * Time.deltaTime, 0);
-
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.green);
-        }
-        if (Physics.Raycast(transform.position, left, rayDistance, mask)) {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.red);
-            TryRight(right, left);
+    private void UpdateResting() {
+        if (Time.time > restTime + startRestTime) {
+            float roll = Random.Range(0f, 1f);
+            
+            if (roll >= 0.50f) {
+                currentState = AvoidingLeft;
+            } else {
+                currentState = AvoidingRight;
+            }
         }
     }
-
-    public void SetTarget(GameObject new_target) {
-        target = new_target;
-    }
-
-    public void MoveToTarget() {
+    private void UpdateSeekingFood() {
         TryToEat();
 
         Quaternion lookAtLocation = Quaternion.LookRotation(target.transform.position - transform.position);
@@ -156,7 +222,14 @@ public class Koi : UdonSharpBehaviour
 
         if (!target.name.StartsWith("In Water") || target.activeSelf == false) {
             target = null;
+            currentState = Swimming;
         }
+    }
+    private void UpdateSeekingMate() {
+    }
+
+    public void SetTarget(GameObject new_target) {
+        target = new_target;
     }
 
     private void TryToEat() {
@@ -179,7 +252,7 @@ public class Koi : UdonSharpBehaviour
         }
 
         if (collider.gameObject.name == "Water") {
-            outOfWater = false;
+            currentState = Swimming;
             sync.SetGravity(false);
             sync.SetKinematic(true);
             //_propBlock.SetFloat("_Speed", 5f); // Not working
@@ -222,7 +295,8 @@ public class Koi : UdonSharpBehaviour
     
     private void OnTriggerExit(Collider collider) {
         if (collider.gameObject.name == "Water") {
-            outOfWater = true;
+            //outOfWater = true;
+            currentState = OutOfWater;
             sync.SetGravity(true);
             sync.SetKinematic(false);
             _propBlock.SetFloat("_Speed", 20f);
@@ -248,6 +322,8 @@ public class Koi : UdonSharpBehaviour
         _rigidBody = GetComponent<Rigidbody>();
         _collider = GetComponent<Collider>();
 
+        _rigidBody.useGravity = gravity;
+        _rigidBody.isKinematic = kinematic;
         sync.SetGravity(gravity);
         sync.SetKinematic(kinematic);
 
@@ -285,6 +361,9 @@ public class Koi : UdonSharpBehaviour
 
     // FOR PLAYER SYNCHRONIZATION
     public override void OnDeserialization() {
+        if (currentState != _currentState) {
+            _currentState = currentState;
+        }
         if (r != _r || b != _b || b2 != _b2 || g2 != _g2) {
             syncNewFish();
         }
