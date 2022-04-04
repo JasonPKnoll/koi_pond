@@ -1,4 +1,4 @@
-﻿
+
 
 using UdonSharp;
 using UnityEngine;
@@ -23,8 +23,8 @@ public class Koi : UdonSharpBehaviour
     // Color Values
     [UdonSynced] public float r = 0f, g = 0f, b = 0f;
     [UdonSynced] public float r2 = 0f, g2 = 0f, b2 = 0f;
-    private float _r = 0f, _g = 0f, _b = 0f;
-    private float _r2 = 0f, _g2 = 0f, _b2 = 0f;
+    public float _r = 0f, _g = 0f, _b = 0f;
+    public float _r2 = 0f, _g2 = 0f, _b2 = 0f;
 
     private float lastDirectionChangeTime;
 
@@ -251,13 +251,16 @@ public class Koi : UdonSharpBehaviour
         sync.SetGravity(gravity);
         sync.SetKinematic(kinematic);
 
-        r = Random.Range(0f, 1f);
-        g = Random.Range(0f, 1f);
-        b = Random.Range(0f, 1f);
+        Color primaryColor = _koiColor.AssignPrimaryColor();
+        Color secondaryColor = _koiColor.AssignSecondaryColor();
 
-        r2 = Random.Range(0f, 1f);
-        g2 = Random.Range(0f, 1f);
-        b2 = Random.Range(0f, 1f);
+        r = primaryColor.r;
+        g = primaryColor.g;
+        b = primaryColor.b;
+
+        r2 = secondaryColor.r;
+        g2 = secondaryColor.g;
+        b2 = secondaryColor.b;
 
         _propBlock.SetColor("_Color", new Color(r, g, b));
         _propBlock.SetColor("_Color2", new Color(r2, g2, b2));
