@@ -46,14 +46,13 @@
 <br>
 
 > This gives the Koi a pattern with two distinct colors. Need to find an alternative solution to the noise generator as it is an unoptimized solution to creating a pattern.
->
-<img src="/assets/images/shader_texture.png">
+> <img src="/assets/images/shader_fish_texture.png">
 
 > This manipulates the vertices on the Koi based on a sin equation.
-> <img src="/assets/images/shader_movement.png">
+> <img src="/assets/images/shader_fish_movement.png">
 
 > This manipulates the vertices on the Koi based on the Kois position in the world.
-> <img src="/assets/images/shader_movement_2.png">
+> <img src="/assets/images/shader_world_movement.png">
 
 > The end results of the shader so far.
 > <img src="/assets/images/koi_shader.gif">
