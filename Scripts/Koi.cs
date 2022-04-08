@@ -26,21 +26,23 @@ public class Koi : UdonSharpBehaviour
     // Intervals
     private float directionChangeInterval = 2.0f;
     private float restTime = 8f;
+    private float restCheckTimer = 10f;
 
     // Timers
     private float lastDirectionChangeTime;
     private float startRestTime;
+    private float lastRestCheck;
 
     private VRCObjectSync sync;
 
     [UdonSynced]
     private Quaternion heading;
 
+    // Components
     private Renderer _renderer;
     private Rigidbody _rigidBody;
     public Collider _collider;
-    [SerializeField] 
-    MaterialPropertyBlock _propBlock;
+    [SerializeField] MaterialPropertyBlock _propBlock;
 
     // State Machine
     // Enum is not compatible with Udon
@@ -50,7 +52,7 @@ public class Koi : UdonSharpBehaviour
     public byte _currentState;
 
     // For RayCasting
-    private float rayDistance = 0.5f;
+    private float rayDistance = 0.3f;
     public LayerMask mask;
     private LayerMask foodMask = 0;
 
@@ -108,106 +110,133 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    public void SetState(byte changedState) {
+        currentState = changedState;
+        RequestSerialization();
+    }
+
     private void UpdateSwimming() {
-        if (-0.01f <= transform.position.y && transform.position.y >= 0.1f) {
-            Vector3 target = new Vector3(transform.position.x, 0.0f, transform.position.z);
-            transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+        // example addition of fishSize 0.06f * 5f = 0.3f
+        float rayDistancePlus = rayDistance + fishSize * 5f;
+
+        CheckDepth();
+
+        if (Time.time > lastRestCheck + restCheckTimer) {
+            float roll = Random.Range(0f, 1f);
+            lastRestCheck = Time.time;
+            if (roll > 0.8f) {
+                startRestTime = Time.time;
+                SetState(Resting);
+            } 
         }
 
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
         Vector3 left = transform.TransformDirection(Vector3.left);
 
-
-        if (!Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+        if (!Physics.Raycast(transform.position, fwd, rayDistancePlus, mask)) {
             transform.rotation = Quaternion.Lerp(transform.rotation, heading, Time.deltaTime * rotationSpeed);
             transform.position += transform.forward * speed * Time.deltaTime;
 
-            Debug.DrawRay(transform.position, fwd * rayDistance, Color.green);
+            Debug.DrawRay(transform.position, fwd * rayDistancePlus, Color.green);
 
             if (Time.time > lastDirectionChangeTime + directionChangeInterval) {
                 ChooseHeading();
             }
         }
 
-        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
-            Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
+        if (Physics.Raycast(transform.position, fwd, rayDistancePlus, mask)) {
+            Debug.DrawRay(transform.position, fwd * rayDistancePlus, Color.red);
+
+            //CheckDepth();
+
             float roll = Random.Range(0f, 1f);
            
             if (roll >= 0.90f) {
                 startRestTime = Time.time;
-                currentState = Resting;
+                SetState(Resting);
             } else if (roll >= 0.45f) {
-                currentState = AvoidingLeft;
+                SetState(AvoidingLeft);
             } else {
-                currentState = AvoidingRight;
+                SetState(AvoidingRight);
             }
         }
     }
+
+    private void CheckDepth() {
+        if (-0.01f <= transform.position.y && transform.position.y >= 0.1f) {
+            Vector3 target = new Vector3(transform.position.x, 0.0f, transform.position.z);
+            transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+        }
+    }
+
     private void UpdateOutOfWater() {
     }
+
     private void UpdateAvoidingLeft() {
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
-        Vector3 right = transform.TransformDirection(Vector3.right);
         Vector3 left = transform.TransformDirection(Vector3.left);
 
-        if (!Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
-            currentState = Swimming;
-            Debug.DrawRay(transform.position, fwd * rayDistance, Color.green);
+        float increasedRayDistance = (rayDistance + fishSize * 5f) * 1.2f;
+
+        if (Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
+            Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.red);
+
+            if (!Physics.Raycast(transform.position, left, increasedRayDistance, mask)) {
+                heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
+                transform.Rotate(0, -90 * Time.deltaTime, 0);
+
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * increasedRayDistance, Color.green);
+            } else if (Physics.Raycast(transform.position, left, increasedRayDistance, mask)) {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * increasedRayDistance, Color.red);
+                SetState(AvoidingRight);
+            }
         }
 
-        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
-            Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
-        }
-
-        if (!Physics.Raycast(transform.position, left, rayDistance, mask)) {
-        heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
-        transform.Rotate(0, -90 * Time.deltaTime, 0);
-
-        Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.green);
-        }
-        if (Physics.Raycast(transform.position, left, rayDistance, mask)) {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.red);
-            currentState = AvoidingRight;
+        if (!Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
+            SetState(Swimming);
+            Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.green);
         }
     }
+
     private void UpdateAvoidingRight() {
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
         Vector3 right = transform.TransformDirection(Vector3.right);
-        Vector3 left = transform.TransformDirection(Vector3.left);
 
-        if (!Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
-            currentState = Swimming;
-            Debug.DrawRay(transform.position, fwd * rayDistance, Color.green);
-        }
+        float increasedRayDistance = (rayDistance + fishSize * 5f) * 1.2f;
 
-        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
-            Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
-        }
+        if (Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
+            Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.red);
 
-        if (!Physics.Raycast(transform.position, right, rayDistance, mask)) {
-            heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
-            transform.Rotate(0, 90 * Time.deltaTime, 0);
+            if (!Physics.Raycast(transform.position, right, increasedRayDistance, mask)) {
+                heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
+                transform.Rotate(0, 90 * Time.deltaTime, 0);
 
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.green);
-        }
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * increasedRayDistance, Color.green);
+            } else if (Physics.Raycast(transform.position, right, increasedRayDistance, mask)) {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * increasedRayDistance, Color.red);
+                SetState(AvoidingLeft);
+            }
+        } 
 
-        if (Physics.Raycast(transform.position, right, rayDistance, mask)) {
-            Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.red);
-            currentState = AvoidingLeft;
+        if (!Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
+            SetState(Swimming);
+            Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.green);
         }
     }
+
     private void UpdateResting() {
         if (Time.time > restTime + startRestTime) {
             float roll = Random.Range(0f, 1f);
             
             if (roll >= 0.50f) {
-                currentState = AvoidingLeft;
+                SetState(AvoidingLeft);
             } else {
-                currentState = AvoidingRight;
+                SetState(AvoidingRight);
             }
         }
     }
+
     private void UpdateSeekingFood() {
         TryToEat();
 
@@ -222,9 +251,10 @@ public class Koi : UdonSharpBehaviour
 
         if (!target.name.StartsWith("In Water") || target.activeSelf == false) {
             target = null;
-            currentState = Swimming;
+            SetState(Swimming);
         }
     }
+
     private void UpdateSeekingMate() {
     }
 
@@ -252,7 +282,7 @@ public class Koi : UdonSharpBehaviour
         }
 
         if (collider.gameObject.name == "Water") {
-            currentState = Swimming;
+            SetState(Swimming);
             sync.SetGravity(false);
             sync.SetKinematic(true);
             //_propBlock.SetFloat("_Speed", 5f); // Not working
@@ -296,7 +326,7 @@ public class Koi : UdonSharpBehaviour
     private void OnTriggerExit(Collider collider) {
         if (collider.gameObject.name == "Water") {
             //outOfWater = true;
-            currentState = OutOfWater;
+            SetState(OutOfWater);
             sync.SetGravity(true);
             sync.SetKinematic(false);
             _propBlock.SetFloat("_Speed", 20f);
