@@ -10,11 +10,18 @@ public class Koi : UdonSharpBehaviour
 {
     private float rotationSpeed = 1.0f;
     private bool swappable = false;
-    public GameObject target; 
+    private bool desireOffspring = false;
+    private bool _desireOffspring = false;
+    public GameObject target;
+    private Food _foodTarget;
 
     [UdonSynced] public float speed = 0.0f;
-    [UdonSynced] public float fishSize = 0.04f;
+    public float fishSpeedIncrement = 0.2f;
     private float _speed = 0.0f;
+
+    [UdonSynced] public float fishSize = 0.04f;
+    public float fishSizeIncrement = 0.01f;
+    public float fishSizeMax = 0.08f;
     private float _fishSize = 0.04f;
 
     // Color Values
@@ -47,8 +54,8 @@ public class Koi : UdonSharpBehaviour
     // State Machine
     // Enum is not compatible with Udon
     public const byte Swimming = 1, OutOfWater = 2, AvoidingLeft = 3, AvoidingRight = 4,
-        Resting = 5, SeekingFood = 6, SeekingMate = 7;
-    public byte currentState;
+        Resting = 5, SeekingFood = 6, SeekingMate = 7, InWater = 8;
+    [UdonSynced] public byte currentState;
     public byte _currentState;
 
     // For RayCasting
@@ -60,6 +67,7 @@ public class Koi : UdonSharpBehaviour
     [SerializeField] CookFish _cookFish;
     [SerializeField] FishSwapper _fishSwapper;
     [SerializeField] FoodSpawner _foodSpawner;
+    [SerializeField] FoodSpawner _vPillSpawner;
     [SerializeField] FishSpawner _fishSpawner;
     [SerializeField] Food _food;
     [SerializeField] KoiColor _koiColor;
@@ -80,29 +88,30 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void Update() {
-
-        switch (currentState) {
-            case Swimming:
-                UpdateSwimming();
-                break;
-            case OutOfWater:
-                UpdateOutOfWater();
-                break;
-            case AvoidingLeft:
-                UpdateAvoidingLeft();
-                break;
-            case AvoidingRight:
-                UpdateAvoidingRight();
-                break;
-            case Resting:
-                UpdateResting();
-                break;
-            case SeekingFood:
-                UpdateSeekingFood();
-                break;
-            case SeekingMate:
-                UpdateSeekingMate();
-                break;
+        if (Networking.IsOwner(gameObject)) { // Only the owner of this gameobject will execute update loops, everyone else will sync
+            switch (currentState) {
+                case Swimming:
+                    UpdateSwimming();
+                    break;
+                case OutOfWater:
+                    UpdateOutOfWater();
+                    break;
+                case AvoidingLeft:
+                    UpdateAvoidingLeft();
+                    break;
+                case AvoidingRight:
+                    UpdateAvoidingRight();
+                    break;
+                case Resting:
+                    UpdateResting();
+                    break;
+                case SeekingFood:
+                    UpdateSeekingFood();
+                    break;
+                case SeekingMate:
+                    UpdateSeekingMate();
+                    break;
+            }
         }
 
         if (transform.position.y < -10) {
@@ -183,10 +192,10 @@ public class Koi : UdonSharpBehaviour
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.red);
 
             if (!Physics.Raycast(transform.position, left, increasedRayDistance, mask)) {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * increasedRayDistance, Color.green);
+
                 heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
                 transform.Rotate(0, -90 * Time.deltaTime, 0);
-
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * increasedRayDistance, Color.green);
             } else if (Physics.Raycast(transform.position, left, increasedRayDistance, mask)) {
                 Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * increasedRayDistance, Color.red);
                 SetState(AvoidingRight);
@@ -194,8 +203,8 @@ public class Koi : UdonSharpBehaviour
         }
 
         if (!Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
-            SetState(Swimming);
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.green);
+            SetState(Swimming);
         }
     }
 
@@ -209,10 +218,10 @@ public class Koi : UdonSharpBehaviour
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.red);
 
             if (!Physics.Raycast(transform.position, right, increasedRayDistance, mask)) {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * increasedRayDistance, Color.green);
+
                 heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
                 transform.Rotate(0, 90 * Time.deltaTime, 0);
-
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * increasedRayDistance, Color.green);
             } else if (Physics.Raycast(transform.position, right, increasedRayDistance, mask)) {
                 Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * increasedRayDistance, Color.red);
                 SetState(AvoidingLeft);
@@ -220,8 +229,8 @@ public class Koi : UdonSharpBehaviour
         } 
 
         if (!Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
-            SetState(Swimming);
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.green);
+            SetState(Swimming);
         }
     }
 
@@ -238,6 +247,7 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void UpdateSeekingFood() {
+        _foodTarget = target.GetComponent<Food>();
         TryToEat();
 
         Quaternion lookAtLocation = Quaternion.LookRotation(target.transform.position - transform.position);
@@ -249,13 +259,15 @@ public class Koi : UdonSharpBehaviour
             transform.position = Vector3.Lerp(transform.position, target.transform.position, speed * Time.deltaTime);
         }
 
-        if (!target.name.StartsWith("In Water") || target.activeSelf == false) {
+        if (_foodTarget.currentState != InWater || target.activeSelf == false) {
             target = null;
+            _foodTarget = null;
             SetState(Swimming);
         }
     }
 
     private void UpdateSeekingMate() {
+        UpdateSwimming();
     }
 
     public void SetTarget(GameObject new_target) {
@@ -295,31 +307,47 @@ public class Koi : UdonSharpBehaviour
         if (collider.gameObject.name == "FriedKoi") {
             EatFood(collider.gameObject);
         }
+        if (collider.gameObject.name  == "vPill"  && fishSize == fishSizeMax) {
+            EatPill(collider.gameObject);
+            SetState(SeekingMate);
+        }
+    }
+
+    private void EatPill(GameObject food) {
+        _food = food.gameObject.GetComponent<Food>();
+        desireOffspring = true;
+        RespawnFood(_food);
+        RequestSerialization();
     }
 
     private void EatFood(GameObject food) {
-        if (fishSize < 0.08f) {
-            _food = food.gameObject.GetComponent<Food>();
-            RespawnFood(_food);
-            fishSize += 0.01f;
-            speed += 0.2f;
-            transform.localScale = new Vector3(fishSize, fishSize, fishSize);
-            RequestSerialization();
-        } else {
-            _food = food.gameObject.GetComponent<Food>();
-            RespawnFood(_food);
+        if (Networking.IsOwner(Networking.LocalPlayer, gameObject)) {
+            if (fishSize < fishSizeMax) {
+                _food = food.gameObject.GetComponent<Food>();
+                RespawnFood(_food);
+                fishSize += fishSizeIncrement;
+                speed += fishSpeedIncrement;
+                transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+                RequestSerialization();
+            } else {
+                _food = food.gameObject.GetComponent<Food>();
+                RespawnFood(_food);
+            }
         }
     }
 
     private void RespawnFood(Food _food) {
-        if (_food.name == "Food" || _food.name == "In Water Food") {
-            _food.name = "Food";
-            _food.inWater = false;
+        if (_food.name == "Food") {
+            // _food.name = "Food";
+            _food.SetState(OutOfWater);
             _foodSpawner.availableObjects.Return(_food.gameObject);
-        } else {
-            _food.name = "FriedKoi";
-            _food.inWater = false;
+        } else if (_food.name == "FriedKoi") {
+            // _food.name = "FriedKoi";
+            _food.SetState(InWater);
             _cookFish.availableObjects.Return(_food.gameObject);
+        } else {
+            _food.SetState(OutOfWater);
+            _vPillSpawner.availableObjects.Return(_food.gameObject);
         }
     }
     
@@ -400,6 +428,9 @@ public class Koi : UdonSharpBehaviour
         if (fishSize != _fishSize) {
             syncFishGrowth();
         }
+        if (desireOffspring != _desireOffspring) {
+            _desireOffspring = desireOffspring;
+        }
     }
 
     void syncFishGrowth() {
@@ -413,15 +444,7 @@ public class Koi : UdonSharpBehaviour
         _r = r; _b = b; _g = g;
         _r2 = r2; _b2 = b2; _g2 = g2;
 
-        speed = 0.2f;
-        fishSize = 0.04f;
-        swappable = false;
-        transform.localScale = new Vector3(fishSize, fishSize, fishSize);
-
         _renderer = GetComponent<Renderer>();
-        _propBlock = new MaterialPropertyBlock();
-        _rigidBody = GetComponent<Rigidbody>();
-        _collider = GetComponent<Collider>();
 
         _propBlock.SetColor("_Color", new Color(r, g, b));
         _propBlock.SetColor("_Color2", new Color(r2, g2, b2));
