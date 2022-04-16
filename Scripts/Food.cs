@@ -23,21 +23,29 @@ public class Food : UdonSharpBehaviour
     public LayerMask mask;
     public int fishMask = 1 << 23;
 
+    // State Machine
     public const byte Swimming = 1, OutOfWater = 2, AvoidingLeft = 3, AvoidingRight = 4,
-    Resting = 5, SeekingFood = 6, SeekingMate = 7;
+    Resting = 5, SeekingFood = 6, SeekingMate = 7, InWater = 8;
+
+    [UdonSynced] public byte currentState;
+    public byte _currentState;
 
     [UdonSynced] public Vector3 spawnLocation;
     public Vector3 _spawnLocation;
 
     void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+        currentState = OutOfWater;
 
         if (gameObject.name.StartsWith("Foo")) {
             gameObject.name = "Food";
             FirstSpawn(true, false);
-        } else {
+        } else if (gameObject.name.StartsWith("Fried")) {
             gameObject.name = "FriedKoi";
             FirstSpawn(false, true);
+        } else {
+            gameObject.name = "vPill";
+            FirstSpawn(true, false);
         }
         _rigidBody = GetComponent<Rigidbody>();
     }
@@ -55,12 +63,14 @@ public class Food : UdonSharpBehaviour
     }
 
 
-
     public void OnEnable() {
+        if (!Networking.IsOwner(gameObject)) {
+            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+        }
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         ResetSpawnPosition();
-        fishSeeking = 0;
-        if (gameObject.name.StartsWith("Foo")) {
+        //fishSeeking = 0;
+        if (gameObject.name.StartsWith("Food")) {
             sync.SetKinematic(true);
             sync.SetGravity(false);
         } else {
@@ -73,44 +83,61 @@ public class Food : UdonSharpBehaviour
         if (gameObject.activeSelf == false) {
             ResetSpawnPosition();
         }
+
         if (_rigidBody.useGravity == false) {
             jiggle();
             if (Time.time > lastMovementChangeTime + movementChangeInterval) {
                 changeDirection();
             }
         }
-        if (inWater == true) {
-            findNearbyFish();
+
+        //Debug.Log(fishSeeking);
+        if (currentState == InWater && fishSeeking <= 2) {
+            if (name == "vPill") {
+                findNearbyAdultFish();
+            } else {
+                findNearbyFish();
+            }
         }
     }
+
+    public void SetState(byte changedState) {
+        currentState = changedState;
+        RequestSerialization();
+    }
+
 
     public void findNearbyFish() {
         Collider[]hitColliders = Physics.OverlapSphere(transform.position, 2f, fishMask);
-        foreach (var hitCollider in hitColliders) {
-            if (hitCollider.name.StartsWith("koi") && fishSeeking <= 2) {
-                var fish = hitCollider.gameObject.GetComponent<Koi>();
-                fish.SetTarget(gameObject);
-                fish.currentState = SeekingFood;
-                fishSeeking += 1;
+        if (fishSeeking <= 2) {
+            foreach (var hitCollider in hitColliders) {
+                if (hitCollider.name.StartsWith("koi") && fishSeeking <= 2) {
+                    var fish = hitCollider.gameObject.GetComponent<Koi>();
+                    if (fish.currentState == Swimming || fish.currentState == Resting) {
+                        fishSeeking =+ 1;
+                        Debug.Log("Hit :" + fishSeeking);
+                        fish.SetTarget(gameObject);
+                        fish.SetState(SeekingFood);
+                    }
+                }
             }
         }
     }
 
-    public bool checkFishViability(Koi fish) {
-        if (fish.gameObject.activeSelf == false) {
-            return false;
-        }
-
-        RaycastHit hit;
-        if (Physics.Raycast(transform.position, (fish.transform.position - transform.position).normalized, out hit, 2f, mask)) {
-            if (hit.collider == fish._collider) {
-                return true;
+    public void findNearbyAdultFish() {
+        Collider[]hitColliders = Physics.OverlapSphere(transform.position, 2f, fishMask);
+        if (fishSeeking <= 2) {
+            foreach (var hitCollider in hitColliders) {
+                if (hitCollider.name.StartsWith("koi") && fishSeeking <= 2) {
+                    Koi fish = hitCollider.gameObject.GetComponent<Koi>();
+                    if (fish.fishSize >= fish.fishSizeIncrement*7 && fish.currentState == Swimming || fish.currentState == Resting) {
+                        fishSeeking += 1;
+                        fish.SetTarget(gameObject);
+                        fish.SetState(SeekingFood);
+                    }
+                }
             }
-                Debug.DrawRay(transform.position, (fish.transform.position - transform.position).normalized * 2f, Color.green);
-        } else {
-            Debug.DrawRay(transform.position, (fish.transform.position - transform.position).normalized * 2f, Color.yellow);
         }
-        return false;
     }
 
 
@@ -135,6 +162,7 @@ public class Food : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
         }
+        
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         sync.SetGravity(true);
         sync.SetKinematic(false);
@@ -144,36 +172,37 @@ public class Food : UdonSharpBehaviour
         if (!Networking.IsOwner(gameObject)) {
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
         }
-
+        
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         sync.SetGravity(true);
         sync.SetKinematic(false);
     }
 
     private void OnTriggerEnter(Collider collider) {
-        if (collider.gameObject.name == "Water") {
-            gameObject.name = gameObject.name.Insert(0, "In Water ");
-            inWater = true;
+        if (collider.gameObject.name == "Water" && currentState == OutOfWater) {
+            SetState(InWater);
+            Debug.Log("IN WATER");
+            //fishSeeking = 0;
             sync.SetGravity(false);
             sync.SetKinematic(true);
         }    
     }
 
     private void OnTriggerExit(Collider collider) {
-        if (collider.gameObject.name == "Water") {
-            gameObject.name = gameObject.name.Remove(0, 9);
-            inWater = false;
-            fishSeeking = 0;
+        if (collider.gameObject.name == "Water" && currentState == InWater) {
+            SetState(OutOfWater);
+            Debug.Log("OUT OF WATER");
+            //fishSeeking = 0;
             sync.SetGravity(true);
             sync.SetKinematic(false);
         }
     }
 
     public void ResetSpawnPosition() {
-        if (gameObject.name.StartsWith("Foo") || gameObject.name.StartsWith("In Water Foo")) {
-            gameObject.transform.position = _foodspawner.transform.position + spawnOffset;
-        } else {
+        if (gameObject.name.StartsWith("Fried")) {
             gameObject.transform.position = _cookFish.transform.position + spawnOffset;
+        } else {
+            gameObject.transform.position = _foodspawner.transform.position + spawnOffset;
         }
     }
 
