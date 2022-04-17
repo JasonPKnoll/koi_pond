@@ -35,7 +35,6 @@ public class Food : UdonSharpBehaviour
 
     void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-        currentState = OutOfWater;
 
         if (gameObject.name.StartsWith("Foo")) {
             gameObject.name = "Food";
@@ -56,10 +55,6 @@ public class Food : UdonSharpBehaviour
         } else {
             gameObject.transform.position = _foodspawner.transform.position + spawnOffset;
         }
-        if (Networking.IsOwner(Networking.LocalPlayer, gameObject)) {
-            sync.SetKinematic(kinematic);
-            sync.SetGravity(gravity);
-        }
     }
 
 
@@ -69,14 +64,6 @@ public class Food : UdonSharpBehaviour
         }
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         ResetSpawnPosition();
-        //fishSeeking = 0;
-        if (gameObject.name.StartsWith("Food")) {
-            sync.SetKinematic(true);
-            sync.SetGravity(false);
-        } else {
-            sync.SetKinematic(false);
-            sync.SetGravity(true);
-        }
     }
 
     void Update() {
@@ -91,12 +78,12 @@ public class Food : UdonSharpBehaviour
             }
         }
 
-        //Debug.Log(fishSeeking);
-        if (currentState == InWater && fishSeeking <= 2) {
+        Debug.Log("Fish Seeking = "+fishSeeking);
+        if (fishSeeking <= 2) {
             if (name == "vPill") {
-                findNearbyAdultFish();
+                findNearbyFish(7.0f);
             } else {
-                findNearbyFish();
+                findNearbyFish(0f);
             }
         }
     }
@@ -106,35 +93,16 @@ public class Food : UdonSharpBehaviour
         RequestSerialization();
     }
 
-
-    public void findNearbyFish() {
+    public void findNearbyFish(float fishSizeMultiplier) {
         Collider[]hitColliders = Physics.OverlapSphere(transform.position, 2f, fishMask);
-        if (fishSeeking <= 2) {
-            foreach (var hitCollider in hitColliders) {
-                if (hitCollider.name.StartsWith("koi") && fishSeeking <= 2) {
-                    var fish = hitCollider.gameObject.GetComponent<Koi>();
-                    if (fish.currentState == Swimming || fish.currentState == Resting) {
-                        fishSeeking =+ 1;
-                        Debug.Log("Hit :" + fishSeeking);
-                        fish.SetTarget(gameObject);
-                        fish.SetState(SeekingFood);
-                    }
-                }
-            }
-        }
-    }
-
-    public void findNearbyAdultFish() {
-        Collider[]hitColliders = Physics.OverlapSphere(transform.position, 2f, fishMask);
-        if (fishSeeking <= 2) {
-            foreach (var hitCollider in hitColliders) {
-                if (hitCollider.name.StartsWith("koi") && fishSeeking <= 2) {
-                    Koi fish = hitCollider.gameObject.GetComponent<Koi>();
-                    if (fish.fishSize >= fish.fishSizeIncrement*7 && fish.currentState == Swimming || fish.currentState == Resting) {
-                        fishSeeking += 1;
-                        fish.SetTarget(gameObject);
-                        fish.SetState(SeekingFood);
-                    }
+        foreach (var hitCollider in hitColliders) {
+            if (fishSeeking <= 2) {
+                Koi fish = hitCollider.gameObject.GetComponent<Koi>();
+                float minFishSize = fish.fishSizeIncrement * fishSizeMultiplier;
+                if (fish.fishSize > minFishSize && fish.currentState == Swimming || fish.fishSize > minFishSize && fish.currentState == Resting) {
+                    fishSeeking += 1;
+                    fish.SetTarget(gameObject);
+                    fish.SetState(SeekingFood);
                 }
             }
         }
@@ -179,9 +147,8 @@ public class Food : UdonSharpBehaviour
     }
 
     private void OnTriggerEnter(Collider collider) {
-        if (collider.gameObject.name == "Water" && currentState == OutOfWater) {
+        if (collider.gameObject.name == "Water") {
             SetState(InWater);
-            Debug.Log("IN WATER");
             //fishSeeking = 0;
             sync.SetGravity(false);
             sync.SetKinematic(true);
@@ -189,12 +156,10 @@ public class Food : UdonSharpBehaviour
     }
 
     private void OnTriggerExit(Collider collider) {
-        if (collider.gameObject.name == "Water" && currentState == InWater) {
+        if (collider.gameObject.name == "Water") {
+            fishSeeking = 0;
             SetState(OutOfWater);
-            Debug.Log("OUT OF WATER");
-            //fishSeeking = 0;
             sync.SetGravity(true);
-            sync.SetKinematic(false);
         }
     }
 
@@ -209,3 +174,4 @@ public class Food : UdonSharpBehaviour
     public override void OnDeserialization() {
     }
 }
+
