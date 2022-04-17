@@ -38,6 +38,8 @@ public class FishSpawner : UdonSharpBehaviour
     public void RespawnFromFall(GameObject fallenObject)
     {
         spawnedObject = fallenObject;
-        spawnedObject.transform.position = transform.position + new Vector3(0f, 10f, 0f);
+        Rigidbody _rigidbody = spawnedObject.GetComponent<Rigidbody>();
+        _rigidbody.velocity = Vector3.zero;
+        spawnedObject.transform.position = transform.position + new Vector3(0f, 8f, 0f);
     }
 }
