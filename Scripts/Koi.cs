@@ -22,7 +22,7 @@ public class Koi : UdonSharpBehaviour
     [UdonSynced] public float fishSize = 0.04f;
     public float fishSizeIncrement = 0.01f;
     public float fishSizeMax = 0.08f;
-    private float _fishSize = 0.04f;
+    public float _fishSize = 0.04f;
 
     // Color Values
     [UdonSynced] public float r = 0f, g = 0f, b = 0f;
@@ -173,8 +173,8 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void CheckDepth() {
-        if (-0.01f <= transform.position.y && transform.position.y >= 0.1f) {
-            Vector3 target = new Vector3(transform.position.x, 0.0f, transform.position.z);
+        if (-0.001f >= transform.position.y || transform.position.y >= 0.1f) {
+            Vector3 target = new Vector3(transform.position.x, 0.005f, transform.position.z);
             transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
         }
     }
