@@ -1,35 +1,32 @@
 ﻿
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
 using VRC.SDKBase;
+using VRC.Udon.Common.Interfaces;
 using VRC.Udon;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
 public class FoodSpawner : UdonSharpBehaviour
 {
-    [SerializeField] 
-    public VRCObjectPool availableObjects;
-    public GameObject spawnedObject;
+    [SerializeField]  public VRCObjectPool availableObjects;
+    private GameObject spawnedObject;
+
+    [SerializeField] Food _food;
 
     private Rigidbody _rigidBody;
+    private VRCObjectSync sync;
 
-    void Start()
-    {
-        
+    void Start() {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
     }
 
-    public override void Interact()
-    {
-        SpawnObject();
+    public override void Interact() {
+        this.SendCustomNetworkEvent(NetworkEventTarget.Owner, "SpawnObject"); ;
     }
-    public void SpawnObject()
-    {
-        if (!Networking.IsOwner(gameObject)) return;
-        spawnedObject = availableObjects.TryToSpawn();
-        _rigidBody = spawnedObject.GetComponent<Rigidbody>();
-        spawnedObject.transform.position = transform.position + new Vector3(0, 0.5f, 0);
-        _rigidBody.isKinematic = true;
-        _rigidBody.useGravity = false;
+    public void SpawnObject() {
+        if (availableObjects == null) return;
+        availableObjects.TryToSpawn();
     }
 }
