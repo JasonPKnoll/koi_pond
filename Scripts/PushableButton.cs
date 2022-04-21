@@ -17,10 +17,7 @@ public class PushableButton : UdonSharpBehaviour
     private bool prevPressedState;
     public AudioSource pressedSound;
     public AudioSource releasedSound;
-    public FoodSpawner _foodSpawner;
-    public FishSpawner _fishSpawner;
-    //public UnityEvent onPressed;
-    //public UnityEvent onReleased;
+    public UdonBehaviour eventTarget;
     public Rigidbody _buttonTopRigidBody;
 
     void Start() {
@@ -67,14 +64,12 @@ public class PushableButton : UdonSharpBehaviour
         prevPressedState = isPressed;
         pressedSound.pitch = 1;
         pressedSound.Play();
-        //onPressed.Invoke();
     }
 
     public void Released() {
         prevPressedState = isPressed;
         releasedSound.pitch = Random.Range(1.1f, 1.2f);
         releasedSound.Play();
-        _foodSpawner.Interact();
-        //onReleased.Invoke();
+        eventTarget.SendCustomEvent("PushButtonToggle");
     }
 }
