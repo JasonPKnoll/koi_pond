@@ -1,7 +1,6 @@
 ﻿
 using UdonSharp;
 using UnityEngine;
-//using UnityEngine.Events;
 using VRC.SDKBase;
 using VRC.Udon;
 
@@ -10,7 +9,7 @@ public class PushableButton : UdonSharpBehaviour
     public Transform buttonTop;
     public Transform buttonLowerLimit;
     public Transform buttonUpperLimit;
-    public float thresHold;
+    public float thresHold = 0.5f;
     public float force = 10;
     private float upperLowerDiff;
     public bool isPressed;
@@ -18,32 +17,50 @@ public class PushableButton : UdonSharpBehaviour
     public AudioSource pressedSound;
     public AudioSource releasedSound;
     public UdonBehaviour eventTarget;
+    public SimpleToggle buttonToggle;
     public Rigidbody _buttonTopRigidBody;
 
     void Start() {
         Physics.IgnoreCollision(GetComponent<Collider>(), buttonTop.GetComponent<Collider>());
         _buttonTopRigidBody = buttonTop.GetComponent<Rigidbody>();
+        buttonToggle = buttonTop.GetComponent<SimpleToggle>();
+
         if (transform.eulerAngles != Vector3.zero) {
             Vector3 savedAngle = transform.eulerAngles;
+            transform.eulerAngles = Vector3.zero;
             upperLowerDiff = buttonUpperLimit.position.y - buttonLowerLimit.position.y;
             transform.eulerAngles = savedAngle;
         } else {
             upperLowerDiff = buttonUpperLimit.position.y - buttonLowerLimit.position.y;
         }
+
+        if (Networking.LocalPlayer.IsUserInVR()) {
+            buttonToggle.enabled = false;
+        } else {
+            _buttonTopRigidBody.isKinematic = true;
+        }
     }
 
     private void Update() {
+        if (Networking.LocalPlayer.IsUserInVR()) {
+            InVrUpdate();
+        } else {
+            InDesktopUpdate();
+        }
+    }
+
+    public void InVrUpdate() {
         buttonTop.transform.localPosition = new Vector3(0, buttonTop.transform.localPosition.y, 0);
         buttonTop.transform.localEulerAngles = new Vector3(0, 0, 0);
+
+        if (buttonTop.localPosition.y <= buttonLowerLimit.localPosition.y) {
+            buttonTop.transform.position = new Vector3(buttonLowerLimit.position.x, buttonLowerLimit.position.y, buttonLowerLimit.position.z);
+        }
 
         if (buttonTop.localPosition.y >= 0) {
             buttonTop.transform.position = new Vector3(buttonUpperLimit.position.x, buttonUpperLimit.position.y, buttonUpperLimit.position.z);
         } else {
             _buttonTopRigidBody.AddForce(buttonTop.transform.up * force * Time.deltaTime);
-        }
-
-        if (buttonTop.localPosition.y <= buttonLowerLimit.localPosition.y) {
-            buttonTop.transform.position = new Vector3(buttonLowerLimit.position.x, buttonLowerLimit.position.y, buttonLowerLimit.position.z);
         }
 
         if (Vector3.Distance(buttonTop.position, buttonLowerLimit.position) < upperLowerDiff * thresHold) {
@@ -58,6 +75,16 @@ public class PushableButton : UdonSharpBehaviour
         if (!isPressed && prevPressedState != isPressed) {
             Released();
         }
+    }
+
+    public void InDesktopUpdate() {
+        buttonTop.transform.localPosition = new Vector3(0, 0, 0);
+        buttonTop.transform.localEulerAngles = new Vector3(0, 0, 0);
+    }
+
+
+    public void ClickButtonToggle() {
+        Released();
     }
 
     public void Pressed() {
