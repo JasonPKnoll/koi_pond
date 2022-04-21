@@ -11,8 +11,9 @@ public class FishSpawner : UdonSharpBehaviour
 {
     [SerializeField]
     public VRCObjectPool availableObjects;
-    public Vector3 fishSpawnLocation;
+    public Transform fishSpawnLocation;
     public GameObject spawnedObject;
+    private float spawnSpeed = 2.0f;
     public Koi _koi;
     public float spawnRadius = 3f;
 
@@ -42,13 +43,17 @@ public class FishSpawner : UdonSharpBehaviour
         spawnedObject.transform.position = transform.position + new Vector3(0f, 8f, 0f);
     }
 
-    public void SpawnInteract() {
+    public void PushButtonToggle() {
         this.SendCustomNetworkEvent(NetworkEventTarget.Owner, "SpawnAtLocation");
     }
 
     public void SpawnAtLocation() {
+        if (availableObjects == null) return;
         spawnedObject = availableObjects.TryToSpawn();
+        spawnedObject.transform.rotation = fishSpawnLocation.transform.localRotation;
+        spawnedObject.transform.position = fishSpawnLocation.position;
         _koi = spawnedObject.GetComponent<Koi>();
-        _koi.transform.position = fishSpawnLocation;
+        _koi.SpawnOutOfWater();
+        _koi._rigidBody.velocity = _koi.transform.forward * spawnSpeed;
     }
 }
