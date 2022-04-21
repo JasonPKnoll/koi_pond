@@ -1,10 +1,9 @@
 ﻿
-
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
-using VRC.SDKBase;
 using VRC.Udon.Common.Interfaces;
+using VRC.SDKBase;
 using VRC.Udon;
 
 [UdonBehaviourSyncMode(BehaviourSyncMode.Manual)]
@@ -22,11 +21,16 @@ public class FoodSpawner : UdonSharpBehaviour
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
     }
 
+    public void PushButtonToggle() {
+        this.SendCustomNetworkEvent(NetworkEventTarget.Owner, "SpawnObject");
+    }
+
     public override void Interact() {
-        this.SendCustomNetworkEvent(NetworkEventTarget.Owner, "SpawnObject"); ;
+        this.SendCustomNetworkEvent(NetworkEventTarget.Owner, "SpawnObject");
     }
     public void SpawnObject() {
         if (availableObjects == null) return;
         availableObjects.TryToSpawn();
     }
 }
+
