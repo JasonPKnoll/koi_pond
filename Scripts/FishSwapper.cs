@@ -20,12 +20,7 @@ public class FishSwapper : UdonSharpBehaviour
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
     }
 
-    public void OnEnable() {
-        //sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-    }
-
     public void SwapFish(GameObject fish) {
-        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         if (!Networking.IsOwner(gameObject))
             Networking.SetOwner(Networking.LocalPlayer, gameObject);
         _fish = fish;

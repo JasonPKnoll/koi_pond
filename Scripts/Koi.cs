@@ -47,7 +47,7 @@ public class Koi : UdonSharpBehaviour
 
     // Components
     private Renderer _renderer;
-    private Rigidbody _rigidBody;
+    public Rigidbody _rigidBody;
     public Collider _collider;
     [SerializeField] MaterialPropertyBlock _propBlock;
 
@@ -82,7 +82,7 @@ public class Koi : UdonSharpBehaviour
             sync.SetGravity(true);
             sync.SetKinematic(false);
         } else {
-            CreateNewKoi(false, true);
+            CreateNewKoi(false, true, Swimming);
             ChooseHeading();
         }
     }
@@ -362,13 +362,10 @@ public class Koi : UdonSharpBehaviour
     }
 
     public void SpawnOutOfWater() {
-        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-        if (!Networking.IsOwner(gameObject))
-            Networking.SetOwner(Networking.LocalPlayer, gameObject);
-        CreateNewKoi(true, false);
+        CreateNewKoi(true, false, OutOfWater);
     }
 
-    public void CreateNewKoi(bool gravity, bool kinematic) {
+    public void CreateNewKoi(bool gravity, bool kinematic, byte state) {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         speed = 0.2f;
         fishSize = 0.04f;
@@ -380,10 +377,11 @@ public class Koi : UdonSharpBehaviour
         _rigidBody = GetComponent<Rigidbody>();
         _collider = GetComponent<Collider>();
 
-        _rigidBody.useGravity = gravity;
-        _rigidBody.isKinematic = kinematic;
+        //_rigidBody.useGravity = gravity;
+        //_rigidBody.isKinematic = kinematic;
         sync.SetGravity(gravity);
         sync.SetKinematic(kinematic);
+        currentState = state;
 
         Color primaryColor = _koiColor.AssignPrimaryColor();
         Color secondaryColor = _koiColor.AssignSecondaryColor();
