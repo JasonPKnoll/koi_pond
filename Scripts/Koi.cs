@@ -1,4 +1,4 @@
-
+﻿
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -81,7 +81,6 @@ public class Koi : UdonSharpBehaviour
     }
 
     public void OnEnable() {
-        //sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
         if (currentState == OutOfWater) {
             sync.SetGravity(true);
             sync.SetKinematic(false);
@@ -147,9 +146,6 @@ public class Koi : UdonSharpBehaviour
         }
 
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
-        Vector3 right = transform.TransformDirection(Vector3.right);
-        Vector3 left = transform.TransformDirection(Vector3.left);
-
         if (!Physics.Raycast(transform.position, fwd, rayDistancePlus, mask)) {
             transform.rotation = Quaternion.Lerp(transform.rotation, heading, Time.deltaTime * rotationSpeed);
             transform.position += transform.forward * speed * Time.deltaTime;
@@ -163,8 +159,6 @@ public class Koi : UdonSharpBehaviour
 
         if (Physics.Raycast(transform.position, fwd, rayDistancePlus, mask)) {
             Debug.DrawRay(transform.position, fwd * rayDistancePlus, Color.red);
-
-            //CheckDepth();
 
             float roll = Random.Range(0f, 1f);
            
@@ -313,6 +307,53 @@ public class Koi : UdonSharpBehaviour
         SetState(Swimming);
         RequestSerialization();
     }
+
+    public void CreateKoiFromParents(Koi firstParent, Koi secondParent, byte state) {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+
+        float rollPrimary = Random.Range(0,1);
+        float rollSecondary = Random.Range(0, 1);
+
+        if (rollPrimary > 0.5f) {
+            r = firstParent.r;
+            g = firstParent.g;
+            b = firstParent.b;
+        } else {
+            r = secondParent.r;
+            g = secondParent.g;
+            b = secondParent.b;
+        }
+
+        if (rollSecondary > 0.5f) {
+            r2 = firstParent.r2;
+            g2 = firstParent.g2;
+            b2 = firstParent.b2;
+        } else {
+            r2 = firstParent.r2;
+            g2 = firstParent.g2;
+            b2 = firstParent.b2;
+        }
+
+        speed = 0.2f;
+        fishSize = 0.04f;
+        transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+
+        _renderer = GetComponent<Renderer>();
+        _propBlock = new MaterialPropertyBlock();
+        _rigidBody = GetComponent<Rigidbody>();
+        _collider = GetComponent<Collider>();
+
+        sync.SetGravity(false);
+        sync.SetKinematic(true);
+        currentState = state;
+
+        _propBlock.SetColor("_Color", new Color(r, g, b));
+        _propBlock.SetColor("_Color2", new Color(r2, g2, b2));
+
+        _renderer.SetPropertyBlock(_propBlock);
+        RequestSerialization();
+    }
+
     private void SearchForMate()
     {
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 3f, fishMask);
@@ -445,8 +486,6 @@ public class Koi : UdonSharpBehaviour
         _rigidBody = GetComponent<Rigidbody>();
         _collider = GetComponent<Collider>();
 
-        //_rigidBody.useGravity = gravity;
-        //_rigidBody.isKinematic = kinematic;
         sync.SetGravity(gravity);
         sync.SetKinematic(kinematic);
         currentState = state;
