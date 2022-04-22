@@ -1,4 +1,4 @@
-﻿
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -10,10 +10,13 @@ public class Koi : UdonSharpBehaviour
 {
     private float rotationSpeed = 1.0f;
     private bool swappable = false;
-    private bool desireOffspring = false;
-    private bool _desireOffspring = false;
+    [UdonSynced] public bool desireOffspring = false;
+    public bool _desireOffspring = false;
+    public bool createsOffspring = false;
+
     public GameObject target;
     private Food _foodTarget;
+    private Koi _koiTarget;
 
     [UdonSynced] public float speed = 0.0f;
     public float fishSpeedIncrement = 0.2f;
@@ -34,11 +37,13 @@ public class Koi : UdonSharpBehaviour
     private float directionChangeInterval = 2.0f;
     private float restTime = 8f;
     private float restCheckTimer = 10f;
+    private float timeToProduceOffspring = 3f;
 
     // Timers
     private float lastDirectionChangeTime;
     private float startRestTime;
     private float lastRestCheck;
+    private float startCreatingOffspring;
 
     private VRCObjectSync sync;
 
@@ -51,8 +56,7 @@ public class Koi : UdonSharpBehaviour
     public Collider _collider;
     [SerializeField] MaterialPropertyBlock _propBlock;
 
-    // State Machine
-    // Enum is not compatible with Udon
+    // State Machine :: Enum is not compatible with Udon
     public const byte Swimming = 1, OutOfWater = 2, AvoidingLeft = 3, AvoidingRight = 4,
         Resting = 5, SeekingFood = 6, SeekingMate = 7, InWater = 8;
     [UdonSynced] public byte currentState;
@@ -61,7 +65,7 @@ public class Koi : UdonSharpBehaviour
     // For RayCasting
     private float rayDistance = 0.3f;
     public LayerMask mask;
-    private LayerMask foodMask = 0;
+    public int fishMask = 1 << 23;
 
     // Access to other Classes
     [SerializeField] CookFish _cookFish;
@@ -125,10 +129,13 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void UpdateSwimming() {
-        // example addition of fishSize 0.06f * 5f = 0.3f
-        float rayDistancePlus = rayDistance + fishSize * 5f;
 
+        float rayDistancePlus = rayDistance + fishSize * 5f;
         CheckDepth();
+
+        if (desireOffspring == true) {
+            SearchForMate();
+        }
 
         if (Time.time > lastRestCheck + restCheckTimer) {
             float roll = Random.Range(0f, 1f);
@@ -267,7 +274,22 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void UpdateSeekingMate() {
-        UpdateSwimming();
+
+    private void SearchForMate()
+    {
+        Collider[] hitColliders = Physics.OverlapSphere(transform.position, 3f, fishMask);
+        foreach (var hitCollider in hitColliders) {
+            if (hitCollider.gameObject == this.gameObject) return;
+            Koi foundKoi = hitCollider.gameObject.GetComponent<Koi>();
+            if (foundKoi.desireOffspring == true && foundKoi.target == null) {
+                foundKoi.SetTargetFish(gameObject);
+                SetTarget(foundKoi.gameObject);
+                _koiTarget = foundKoi;
+                SetState(SeekingMate);
+                createsOffspring = true;
+            }
+        }
+    }
     }
 
     public void SetTarget(GameObject new_target) {
