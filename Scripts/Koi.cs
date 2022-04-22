@@ -274,6 +274,30 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void UpdateSeekingMate() {
+        if (_koiTarget.currentState == OutOfWater || target.activeSelf == false) {
+            startCreatingOffspring = 0;
+            target = null;
+            _koiTarget = null;
+            SetState(Swimming);
+        }
+
+        Quaternion lookAtLocation = Quaternion.LookRotation(target.transform.position - transform.position);
+
+        transform.rotation = Quaternion.Slerp(transform.rotation, lookAtLocation, rotationSpeed * 3f * Time.deltaTime);
+        if (Vector3.Distance(transform.position, target.transform.position) > 0.15f) {
+            transform.position += transform.forward * speed * 1.2f * Time.deltaTime;
+            startCreatingOffspring = 0;
+        } else {
+            if (startCreatingOffspring == 0) {
+                startCreatingOffspring = Time.time;
+            } else {
+                if (Time.time > startCreatingOffspring + timeToProduceOffspring) {
+                    Procreate();
+               }
+            }
+            // stop transform.position
+        }
+    }
 
     private void SearchForMate()
     {
