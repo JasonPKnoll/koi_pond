@@ -290,6 +290,13 @@ public class Koi : UdonSharpBehaviour
             }
         }
     }
+
+    public void SetTargetFish(GameObject fish) {
+        Koi koi = fish.GetComponent<Koi>();
+        SetTarget(fish);
+        _koiTarget = koi;
+        SetState(SeekingMate);
+        createsOffspring = false;
     }
 
     public void SetTarget(GameObject new_target) {
@@ -300,7 +307,10 @@ public class Koi : UdonSharpBehaviour
         Debug.DrawRay(transform.position, (target.transform.position - transform.position).normalized * 0.5f, Color.cyan);
         float distance = Vector3.Distance(transform.position, target.transform.position);
         if (distance < 0.12f) {
-            EatFood(target.gameObject);
+            if (target.name == "vPill")
+                EatPill(target.gameObject);
+            else
+                EatFood(target.gameObject);
         }
     }
 
@@ -329,14 +339,14 @@ public class Koi : UdonSharpBehaviour
         if (collider.gameObject.name == "FriedKoi") {
             EatFood(collider.gameObject);
         }
-        if (collider.gameObject.name  == "vPill"  && fishSize == fishSizeMax) {
+        if (collider.gameObject.name  == "vPill"  && fishSize >= fishSizeMax-fishSizeIncrement) {
             EatPill(collider.gameObject);
-            SetState(SeekingMate);
+            desireOffspring = true;
         }
     }
 
-    private void EatPill(GameObject food) {
-        _food = food.gameObject.GetComponent<Food>();
+    private void EatPill(GameObject pill) {
+        _food = pill.gameObject.GetComponent<Food>();
         desireOffspring = true;
         RespawnFood(_food);
         RequestSerialization();
@@ -360,11 +370,9 @@ public class Koi : UdonSharpBehaviour
 
     private void RespawnFood(Food _food) {
         if (_food.name == "Food") {
-            // _food.name = "Food";
             _food.SetState(OutOfWater);
             _foodSpawner.availableObjects.Return(_food.gameObject);
         } else if (_food.name == "FriedKoi") {
-            // _food.name = "FriedKoi";
             _food.SetState(InWater);
             _cookFish.availableObjects.Return(_food.gameObject);
         } else {
@@ -375,8 +383,8 @@ public class Koi : UdonSharpBehaviour
     
     private void OnTriggerExit(Collider collider) {
         if (collider.gameObject.name == "Water") {
-            //outOfWater = true;
             SetState(OutOfWater);
+            target = null;
             sync.SetGravity(true);
             sync.SetKinematic(false);
             _propBlock.SetFloat("_Speed", 20f);
