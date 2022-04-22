@@ -299,6 +299,20 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    public void Procreate() {
+        if (createsOffspring == true) {
+            GameObject newFish = _fishSpawner.availableObjects.TryToSpawn();
+            newFish.transform.position = transform.position;
+            if (newFish == null) return;
+            Koi newKoi = newFish.GetComponent<Koi>();
+            newKoi.CreateKoiFromParents(this, _koiTarget, InWater);
+        }
+        desireOffspring = false;
+        target = null;
+        _koiTarget = null;
+        SetState(Swimming);
+        RequestSerialization();
+    }
     private void SearchForMate()
     {
         Collider[] hitColliders = Physics.OverlapSphere(transform.position, 3f, fishMask);
