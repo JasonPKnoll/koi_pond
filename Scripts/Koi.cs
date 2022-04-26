@@ -1,4 +1,4 @@
-﻿
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -27,6 +27,10 @@ public class Koi : UdonSharpBehaviour
     public float fishSizeMax = 0.08f;
     public float _fishSize = 0.04f;
 
+    public AudioSource audioPlayerBonk;
+    public AudioSource audioEatObject;
+    public AudioSource audioMakeOffspring;
+    public AudioSource audioHittingWater;
     // Color Values
     [UdonSynced] public float r = 0f, g = 0f, b = 0f;
     [UdonSynced] public float r2 = 0f, g2 = 0f, b2 = 0f;
@@ -393,6 +397,24 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    private void OnTriggerExit(Collider collider)
+    {
+        if (collider.gameObject.name == "Water")
+        {
+            Debug.Log("OUT OF WATER");
+            //audioHittingWater.pitch = Random.Range(0.8f, 1.2f);
+            //audioHittingWater.Play();
+            if (Networking.IsOwner(Networking.LocalPlayer, gameObject))
+            {
+                SetState(OutOfWater);
+                target = null;
+                sync.SetGravity(true);
+                sync.SetKinematic(false);
+            }
+            //_propBlock.SetFloat("_Speed", 20f);
+        }
+    }
+
     private void OnTriggerEnter(Collider collider) {
         if (collider.gameObject.name == "Fire") {
             _cookFish.Cook(gameObject);
@@ -405,6 +427,9 @@ public class Koi : UdonSharpBehaviour
         }
 
         if (collider.gameObject.name == "Water") {
+            Debug.Log("IN WATER");
+            //audioHittingWater.pitch = Random.Range(0.8f, 1.2f);
+            //audioHittingWater.Play();
             SetState(Swimming);
             sync.SetGravity(false);
             sync.SetKinematic(true);
@@ -426,6 +451,8 @@ public class Koi : UdonSharpBehaviour
 
     private void EatPill(GameObject pill) {
         _food = pill.gameObject.GetComponent<Food>();
+        audioEatObject.pitch = Random.Range(1f, 1.2f);
+        audioEatObject.Play();
         desireOffspring = true;
         RespawnFood(_food);
         RequestSerialization();
@@ -433,6 +460,8 @@ public class Koi : UdonSharpBehaviour
 
     private void EatFood(GameObject food) {
         if (Networking.IsOwner(Networking.LocalPlayer, gameObject)) {
+            audioEatObject.pitch = Random.Range(1f, 1.2f);
+            audioEatObject.Play();
             if (fishSize < fishSizeMax) {
                 _food = food.gameObject.GetComponent<Food>();
                 RespawnFood(_food);
