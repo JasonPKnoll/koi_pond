@@ -124,8 +124,10 @@ public class Koi : UdonSharpBehaviour
             }
         }
 
-        if (transform.position.y < -10) {
-            _fishSpawner.RespawnFromFall(gameObject);
+        if (transform.position.y < -8) {
+            //_fishSpawner.RespawnFromFall(gameObject);
+            _rigidBody.velocity = Vector3.zero;
+            _fishSpawner.ThisSpawnAtLocation(this);
         }
     }
 
