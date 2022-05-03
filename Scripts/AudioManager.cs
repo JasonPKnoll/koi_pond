@@ -12,4 +12,13 @@ public class AudioManager : UdonSharpBehaviour
     public AudioSource[] audioMakingOffspring;
     public AudioSource[] audioBonk;
 
+    public AudioSource GetAudio(AudioSource[] audioArray, GameObject audioSource) {
+        foreach (AudioSource audio in audioArray) {
+            if (!audio.isPlaying) {
+                audio.transform.position = audioSource.transform.position;
+                return audio;
+            }
+        }
+        return null;
+    }
 }
