@@ -1,4 +1,4 @@
-
+﻿
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -405,50 +405,7 @@ public class Koi : UdonSharpBehaviour
         if (audioMakeOffspring != null) {
             audioMakeOffspring.Stop();
             audioMakeOffspring = null;
-
-    public void CreateKoiFromParents(Koi firstParent, Koi secondParent, byte state) {
-        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
-
-        float rollPrimary = Random.Range(0,1);
-        float rollSecondary = Random.Range(0, 1);
-
-        if (rollPrimary > 0.5f) {
-            r = firstParent.r;
-            g = firstParent.g;
-            b = firstParent.b;
-        } else {
-            r = secondParent.r;
-            g = secondParent.g;
-            b = secondParent.b;
         }
-
-        if (rollSecondary > 0.5f) {
-            r2 = firstParent.r2;
-            g2 = firstParent.g2;
-            b2 = firstParent.b2;
-        } else {
-            r2 = firstParent.r2;
-            g2 = firstParent.g2;
-            b2 = firstParent.b2;
-        }
-
-        speed = 0.2f;
-        fishSize = 0.04f;
-        transform.localScale = new Vector3(fishSize, fishSize, fishSize);
-
-        _renderer = GetComponent<Renderer>();
-        _propBlock = new MaterialPropertyBlock();
-        _rigidBody = GetComponent<Rigidbody>();
-        _collider = GetComponent<Collider>();
-
-        sync.SetGravity(false);
-        sync.SetKinematic(true);
-        currentState = state;
-
-        _propBlock.SetColor("_Color", new Color(r, g, b));
-        _propBlock.SetColor("_Color2", new Color(r2, g2, b2));
-
-        _renderer.SetPropertyBlock(_propBlock);
         RequestSerialization();
     }
 
@@ -585,16 +542,6 @@ public class Koi : UdonSharpBehaviour
             _vPillSpawner.availableObjects.Return(_food.gameObject);
         }
     }
-    
-    private void OnTriggerExit(Collider collider) {
-        if (collider.gameObject.name == "Water") {
-            SetState(OutOfWater);
-            target = null;
-            sync.SetGravity(true);
-            sync.SetKinematic(false);
-            _propBlock.SetFloat("_Speed", 20f);
-        }
-    }
 
     public void SpawnOutOfWater() {
         CreateNewKoi(true, false, OutOfWater);
@@ -634,11 +581,54 @@ public class Koi : UdonSharpBehaviour
         RequestSerialization();
     }    
 
-    public override void OnPickup() {
-        if (!Networking.IsOwner(gameObject)) {
-            Networking.SetOwner(Networking.LocalPlayer, gameObject);
+    public void CreateKoiFromParents(Koi firstParent, Koi secondParent, byte state) {
+        sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
+
+        float rollPrimary = Random.Range(0,1);
+        float rollSecondary = Random.Range(0, 1);
+
+        if (rollPrimary > 0.5f) {
+            r = firstParent.r;
+            g = firstParent.g;
+            b = firstParent.b;
+        } else {
+            r = secondParent.r;
+            g = secondParent.g;
+            b = secondParent.b;
         }
-        swappable = true;
+
+        if (rollSecondary > 0.5f) {
+            r2 = firstParent.r2;
+            g2 = firstParent.g2;
+            b2 = firstParent.b2;
+        } else {
+            r2 = firstParent.r2;
+            g2 = firstParent.g2;
+            b2 = firstParent.b2;
+        }
+
+        speed = 0.2f;
+        fishSize = 0.04f;
+        transform.localScale = new Vector3(fishSize, fishSize, fishSize);
+
+        _renderer = GetComponent<Renderer>();
+        _propBlock = new MaterialPropertyBlock();
+        _rigidBody = GetComponent<Rigidbody>();
+        _collider = GetComponent<Collider>();
+
+        sync.SetGravity(false);
+        sync.SetKinematic(true);
+        currentState = state;
+
+        _propBlock.SetColor("_Color", new Color(r, g, b));
+        _propBlock.SetColor("_Color2", new Color(r2, g2, b2));
+
+        _renderer.SetPropertyBlock(_propBlock);
+        RequestSerialization();
+    }
+
+    public override void OnPickup() {
+        if (!Networking.IsOwner(gameObject)) Networking.SetOwner(Networking.LocalPlayer, gameObject);
     }
 
     void ChooseHeading() {
