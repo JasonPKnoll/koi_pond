@@ -179,6 +179,15 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    private void AttemptRest() {
+        float roll = Random.Range(0f, 1f);
+        lastRestCheck = Time.time;
+        if (roll > 0.8f) {
+            startRestTime = Time.time;
+            SetState(Resting);
+        } 
+    }
+
     private void CheckDepth() {
         if (-0.001f >= transform.position.y || transform.position.y >= 0.1f) {
             Vector3 depthTarget = new Vector3(transform.position.x, 0.005f, transform.position.z);
@@ -188,6 +197,10 @@ public class Koi : UdonSharpBehaviour
             transform.position = Vector3.Lerp(transform.position, depthTarget, speed * Time.deltaTime);
         }
     }
+
+    private void HeartsAnimation() {
+        if (desireOffspring == true) {
+            particleHearts.Play();
         }
     }
 
