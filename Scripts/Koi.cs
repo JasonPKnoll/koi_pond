@@ -371,12 +371,17 @@ public class Koi : UdonSharpBehaviour
             }
         }
     }
+
+    public void ResetFromProcreate() {
         desireOffspring = false;
+        createsOffspring = false;
         target = null;
         _koiTarget = null;
         SetState(Swimming);
-        RequestSerialization();
-    }
+        particleHearts.Stop();
+        if (audioMakeOffspring != null) {
+            audioMakeOffspring.Stop();
+            audioMakeOffspring = null;
 
     public void CreateKoiFromParents(Koi firstParent, Koi secondParent, byte state) {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
