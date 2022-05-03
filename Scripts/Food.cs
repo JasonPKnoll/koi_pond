@@ -35,11 +35,14 @@ public class Food : UdonSharpBehaviour
     public const byte Swimming = 1, OutOfWater = 2, AvoidingLeft = 3, AvoidingRight = 4,
     Resting = 5, SeekingFood = 6, SeekingMate = 7, InWater = 8;
 
+    [SerializeField] AudioManager _audioManager;
     [UdonSynced] public byte currentState;
     public byte _currentState;
 
     [UdonSynced] public Vector3 spawnLocation;
     public Vector3 _spawnLocation;
+
+
 
     void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
@@ -155,9 +158,10 @@ public class Food : UdonSharpBehaviour
     }
 
     private void OnTriggerEnter(Collider collider) {
-        if (collider.gameObject.name == "Water") {
+        if (collider.gameObject.name == "Water" && Time.time > lastOutOfWaterTime + outOfWaterInterval) {
+            float pitch = Random.Range(0.5f, 0.6f); 
+            _audioManager.PlayOnce(_audioManager.audioSplash, gameObject, pitch);
             SetState(InWater);
-            //fishSeeking = 0;
             sync.SetGravity(false);
             sync.SetKinematic(true);
             lastOutOfWaterTime = Time.time;
@@ -165,7 +169,9 @@ public class Food : UdonSharpBehaviour
     }
 
     private void OnTriggerExit(Collider collider) {
-        if (collider.gameObject.name == "Water") {
+        if (collider.gameObject.name == "Water" && Time.time > lastOutOfWaterTime + outOfWaterInterval) {
+            float pitch = Random.Range(0.5f, 0.6f);
+            _audioManager.PlayOnce(_audioManager.audioSplash, gameObject, pitch);
             fishSeeking = 0;
             SetState(OutOfWater);
             sync.SetGravity(true);
