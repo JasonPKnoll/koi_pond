@@ -136,36 +136,32 @@ public class Koi : UdonSharpBehaviour
 
     private void UpdateSwimming() {
 
-        float rayDistancePlus = rayDistance + fishSize * 5f;
+        //float rayDistancePlus = rayDistance + fishSize * 5f;
         CheckDepth();
 
         if (desireOffspring == true) {
             SearchForMate();
+            if (_koiTarget) SetState(SeekingMate);
         }
 
         if (Time.time > lastRestCheck + restCheckTimer) {
-            float roll = Random.Range(0f, 1f);
-            lastRestCheck = Time.time;
-            if (roll > 0.8f) {
-                startRestTime = Time.time;
-                SetState(Resting);
-            } 
+            AttemptRest();
         }
 
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
-        if (!Physics.Raycast(transform.position, fwd, rayDistancePlus, mask)) {
+        if (!Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.green);
+
             transform.rotation = Quaternion.Lerp(transform.rotation, heading, Time.deltaTime * rotationSpeed);
             transform.position += transform.forward * speed * Time.deltaTime;
-
-            Debug.DrawRay(transform.position, fwd * rayDistancePlus, Color.green);
 
             if (Time.time > lastDirectionChangeTime + directionChangeInterval) {
                 ChooseHeading();
             }
         }
 
-        if (Physics.Raycast(transform.position, fwd, rayDistancePlus, mask)) {
-            Debug.DrawRay(transform.position, fwd * rayDistancePlus, Color.red);
+        if (Physics.Raycast(transform.position, fwd, rayDistance, mask)) {
+            Debug.DrawRay(transform.position, fwd * rayDistance, Color.red);
 
             float roll = Random.Range(0f, 1f);
            
@@ -173,17 +169,22 @@ public class Koi : UdonSharpBehaviour
                 startRestTime = Time.time;
                 SetState(Resting);
             } else if (roll >= 0.45f) {
-                SetState(AvoidingLeft);
+                CheckLeftFirst();
             } else {
-                SetState(AvoidingRight);
+                CheckRightFirst();
             }
         }
     }
 
     private void CheckDepth() {
         if (-0.001f >= transform.position.y || transform.position.y >= 0.1f) {
-            Vector3 target = new Vector3(transform.position.x, 0.005f, transform.position.z);
-            transform.position = Vector3.MoveTowards(transform.position, target, speed * Time.deltaTime);
+            Vector3 depthTarget = new Vector3(transform.position.x, 0.005f, transform.position.z);
+            Quaternion depthTargetQuanternion = Quaternion.Euler(depthTarget.x, depthTarget.y, depthTarget.z);
+
+            transform.rotation = Quaternion.Slerp(transform.rotation, depthTargetQuanternion, rotationSpeed * Time.deltaTime);
+            transform.position = Vector3.Lerp(transform.position, depthTarget, speed * Time.deltaTime);
+        }
+    }
         }
     }
 
