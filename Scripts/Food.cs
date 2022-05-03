@@ -7,19 +7,16 @@ using VRC.Udon;
 
 public class Food : UdonSharpBehaviour
 {
-    public float movementChangeInterval = 1.5f;
-    private float lastMovementChangeTime;
     private bool isUp = true;
     public bool inWater = false;
     public Vector3 spawnOffset = new Vector3 (0f, 0.2f, 0f); 
     public float positionY = 0.03f;
-    private int fishSeeking = 0;
+    public int fishSeeking = 0;
+    public int maxSeeking = 100;
 
     private VRCObjectSync sync;
     private Rigidbody _rigidBody;
-    public FoodSpawner _foodspawner;
-    public FishSpawner _fishspawner;
-    public CookFish _cookFish;
+    public UdonBehaviour eventTarget;
     public LayerMask mask;
     public int fishMask = 1 << 23;
 
@@ -36,6 +33,10 @@ public class Food : UdonSharpBehaviour
     Resting = 5, SeekingFood = 6, SeekingMate = 7, InWater = 8;
 
     [SerializeField] AudioManager _audioManager;
+    [SerializeField] FoodSpawner _foodspawner;
+    [SerializeField] FishSpawner _fishspawner;
+    [SerializeField] CookFish _cookFish;
+
     [UdonSynced] public byte currentState;
     public byte _currentState;
 
@@ -78,23 +79,24 @@ public class Food : UdonSharpBehaviour
     }
 
     void Update() {
-        if (gameObject.activeSelf == false) {
-            ResetSpawnPosition();
-        }
-
-        if (_rigidBody.useGravity == false) {
-            jiggle();
-            if (Time.time > lastMovementChangeTime + movementChangeInterval) {
-                changeDirection();
+        if (Networking.IsOwner(gameObject)) {
+            if (gameObject.activeSelf == false) {
+                ResetSpawnPosition();
             }
-        }
 
-        Debug.Log("Fish Seeking = "+fishSeeking);
-        if (fishSeeking <= 2) {
-            if (name == "vPill") {
-                findNearbyFish(7.0f);
-            } else {
-                findNearbyFish(0f);
+            if (_rigidBody.useGravity == false) {
+                jiggle();
+                if (Time.time > lastMovementChangeTime + movementChangeInterval) {
+                    changeDirection();
+                }
+            }
+
+            if (currentState == InWater && fishSeeking <= maxSeeking) {
+                if (name == "vPill") {
+                    findNearbyFish(7.0f);
+                } else {
+                    findNearbyFish(0f);
+                }
             }
         }
     }
@@ -107,8 +109,9 @@ public class Food : UdonSharpBehaviour
     public void findNearbyFish(float fishSizeMultiplier) {
         Collider[]hitColliders = Physics.OverlapSphere(transform.position, 2f, fishMask);
         foreach (var hitCollider in hitColliders) {
-            if (fishSeeking <= 2) {
+            if (fishSeeking <= maxSeeking) {
                 Koi fish = hitCollider.gameObject.GetComponent<Koi>();
+                if (fish == null) return;
                 float minFishSize = fish.fishSizeIncrement * fishSizeMultiplier;
                 if (fish.fishSize > minFishSize && fish.currentState == Swimming || fish.fishSize > minFishSize && fish.currentState == Resting) {
                     fishSeeking += 1;
