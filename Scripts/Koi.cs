@@ -80,6 +80,7 @@ public class Koi : UdonSharpBehaviour
     [SerializeField] FishSpawner _fishSpawner;
     [SerializeField] Food _food;
     [SerializeField] KoiColor _koiColor;
+    [SerializeField] AudioManager _audioManager;
 
     void Start() {
         sync = (VRCObjectSync)GetComponent(typeof(VRCObjectSync));
@@ -186,6 +187,14 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void UpdateOutOfWater() {
+        //Debug.Log("VELOCITY: "+ (_rigidBody.velocity.magnitude > 0.0000001f));
+        //Debug.Log("DISTANCE BETWEEN: "+(Vector3.Distance(gameObject.transform.position, Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head))));
+
+        //if ( _rigidBody.velocity.magnitude > 0.01f && Vector3.Distance(gameObject.transform.position, Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head)) < 1.0f) {
+        if (Vector3.Distance(gameObject.transform.position, Networking.LocalPlayer.GetBonePosition(HumanBodyBones.Head)) <= 0.3f) {
+            float audioPitch = Random.Range(0.8f, 1.2f);
+            _audioManager.PlayOnce(_audioManager.audioBonk, gameObject, audioPitch);
+        }
     }
 
     private void UpdateAvoidingLeft() {
@@ -283,9 +292,15 @@ public class Koi : UdonSharpBehaviour
         Quaternion lookAtLocation = Quaternion.LookRotation(target.transform.position - transform.position);
 
         transform.rotation = Quaternion.Slerp(transform.rotation, lookAtLocation, rotationSpeed * 3f * Time.deltaTime);
+
         if (Vector3.Distance(transform.position, target.transform.position) > 0.15f) {
             transform.position += transform.forward * speed * 1.2f * Time.deltaTime;
             startCreatingOffspring = 0;
+            if (audioMakeOffspring != null) {
+                audioMakeOffspring.Stop();
+                audioMakeOffspring = null;
+            }
+
         } else {
             if (startCreatingOffspring == 0) {
                 startCreatingOffspring = Time.time;
