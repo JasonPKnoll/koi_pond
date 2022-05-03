@@ -1,4 +1,4 @@
-﻿
+
 using UdonSharp;
 using UnityEngine;
 using VRC.SDK3.Components;
@@ -22,6 +22,14 @@ public class Food : UdonSharpBehaviour
     public CookFish _cookFish;
     public LayerMask mask;
     public int fishMask = 1 << 23;
+
+    // Intervals
+    public float movementChangeInterval = 1.5f;
+    private float outOfWaterInterval = 0.03f;
+
+    // timers
+    private float lastMovementChangeTime;
+    private float lastOutOfWaterTime;
 
     // State Machine
     public const byte Swimming = 1, OutOfWater = 2, AvoidingLeft = 3, AvoidingRight = 4,
@@ -152,6 +160,7 @@ public class Food : UdonSharpBehaviour
             //fishSeeking = 0;
             sync.SetGravity(false);
             sync.SetKinematic(true);
+            lastOutOfWaterTime = Time.time;
         }    
     }
 
@@ -160,6 +169,7 @@ public class Food : UdonSharpBehaviour
             fishSeeking = 0;
             SetState(OutOfWater);
             sync.SetGravity(true);
+            lastOutOfWaterTime = Time.time;
         }
     }
 
