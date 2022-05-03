@@ -41,13 +41,14 @@ public class Koi : UdonSharpBehaviour
     private float directionChangeInterval = 2.0f;
     private float restTime = 8f;
     private float restCheckTimer = 10f;
-    private float timeToProduceOffspring = 3f;
+    private float outOfWaterInterval = 0.03f;
 
     // Timers
     private float lastDirectionChangeTime;
     private float startRestTime;
     private float lastRestCheck;
     private float startCreatingOffspring;
+    private float lastOutOfWaterTime;
 
     private VRCObjectSync sync;
 
@@ -397,19 +398,13 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
-    private void OnTriggerExit(Collider collider)
-    {
-        if (collider.gameObject.name == "Water")
-        {
-            Debug.Log("OUT OF WATER");
-            //audioHittingWater.pitch = Random.Range(0.8f, 1.2f);
-            //audioHittingWater.Play();
-            if (Networking.IsOwner(Networking.LocalPlayer, gameObject))
-            {
+    private void OnTriggerExit(Collider collider) {
+        if (Time.time > lastOutOfWaterTime + outOfWaterInterval && collider.gameObject.name == "Water") {
                 SetState(OutOfWater);
                 target = null;
                 sync.SetGravity(true);
                 sync.SetKinematic(false);
+                lastOutOfWaterTime = Time.time;
             }
             //_propBlock.SetFloat("_Speed", 20f);
         }
@@ -426,13 +421,13 @@ public class Koi : UdonSharpBehaviour
             }
         }
 
-        if (collider.gameObject.name == "Water") {
-            Debug.Log("IN WATER");
-            //audioHittingWater.pitch = Random.Range(0.8f, 1.2f);
-            //audioHittingWater.Play();
+        if (Time.time > lastOutOfWaterTime + outOfWaterInterval && collider.gameObject.name == "Water") {
             SetState(Swimming);
             sync.SetGravity(false);
             sync.SetKinematic(true);
+            sync.SetGravity(false);
+            lastRestCheck = Time.time;
+            lastOutOfWaterTime = Time.time;
             //_propBlock.SetFloat("_Speed", 5f); // Not working
             gameObject.transform.position += new Vector3(0f, 0f, 0f);
         }
