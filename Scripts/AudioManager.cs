@@ -1,4 +1,4 @@
-
+﻿
 using UdonSharp;
 using UnityEngine;
 using VRC.SDKBase;
@@ -20,5 +20,17 @@ public class AudioManager : UdonSharpBehaviour
             }
         }
         return null;
+    }
+
+    public void PlayOnce(AudioSource[] audioArray, GameObject audioSource, float pitchValue) {
+        foreach (AudioSource audio in audioArray) {
+            if (!audio.isPlaying) {
+                audio.transform.position = audioSource.transform.position;
+                audio.pitch = pitchValue;
+                audio.Play();
+                return;
+            }
+        }
+        return;
     }
 }
