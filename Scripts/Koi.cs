@@ -38,7 +38,7 @@ public class Koi : UdonSharpBehaviour
     public float _r2 = 0f, _g2 = 0f, _b2 = 0f;
 
     // Intervals
-    private float directionChangeInterval = 2.0f;
+    private float directionChangeInterval = 3.0f;
     private float restTime = 8f;
     private float restCheckTimer = 10f;
     private float outOfWaterInterval = 0.03f;
@@ -54,6 +54,7 @@ public class Koi : UdonSharpBehaviour
 
     [UdonSynced]
     private Quaternion heading;
+    private Quaternion avoidDirection;
 
     // Components
     private Renderer _renderer;
@@ -197,6 +198,7 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+
     private void UpdateAvoidingLeft() {
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
         Vector3 left = transform.TransformDirection(Vector3.left);
@@ -206,19 +208,25 @@ public class Koi : UdonSharpBehaviour
         if (Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.red);
 
-            if (!Physics.Raycast(transform.position, left, increasedRayDistance, mask)) {
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * increasedRayDistance, Color.green);
+            if (!Physics.Raycast(transform.position, left, rayDistance, mask)) {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.green);
 
-                heading = Quaternion.Euler(0.0f, heading.eulerAngles.y - 90.0f, 0.0f);
-                transform.Rotate(0, -90 * Time.deltaTime, 0);
-            } else if (Physics.Raycast(transform.position, left, increasedRayDistance, mask)) {
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * increasedRayDistance, Color.red);
-                SetState(AvoidingRight);
+                avoidDirection = Quaternion.Euler(transform.position.x, transform.eulerAngles.y - 90.0f, transform.position.z);
+                transform.localRotation = Quaternion.Lerp(transform.rotation, avoidDirection, rotationSpeed * 1.25f * Time.deltaTime);
+
+            //else if (Physics.Raycast(transform.position, left, rayDistance, mask)) {
+            //    Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.left) * rayDistance, Color.red);
+            //    SetState(AvoidingRight);
+            //}
             }
         }
 
         if (!Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.green);
+            transform.localRotation = Quaternion.Lerp(transform.rotation, avoidDirection, rotationSpeed * 1.25f * Time.deltaTime);
+            heading = Quaternion.Euler(0f, transform.eulerAngles.y - 90f, 0f);
+            lastRestCheck = Time.time;
+            lastDirectionChangeTime = Time.time;
             SetState(Swimming);
         }
     }
@@ -232,19 +240,24 @@ public class Koi : UdonSharpBehaviour
         if (Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.red);
 
-            if (!Physics.Raycast(transform.position, right, increasedRayDistance, mask)) {
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * increasedRayDistance, Color.green);
+            if (!Physics.Raycast(transform.position, right, rayDistance, mask)) {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.green);
 
-                heading = Quaternion.Euler(0.0f, heading.eulerAngles.y + 90.0f, 0.0f);
-                transform.Rotate(0, 90 * Time.deltaTime, 0);
-            } else if (Physics.Raycast(transform.position, right, increasedRayDistance, mask)) {
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * increasedRayDistance, Color.red);
-                SetState(AvoidingLeft);
+                avoidDirection = Quaternion.Euler(transform.position.x, transform.eulerAngles.y + 90f, transform.position.z);
+                transform.localRotation = Quaternion.Lerp(transform.rotation, avoidDirection, rotationSpeed * 1.25f * Time.deltaTime);
+
+                //    } else if (Physics.Raycast(transform.position, right, rayDistance, mask)) {
+                //        Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.right) * rayDistance, Color.red);
+                //        SetState(AvoidingLeft);
             }
         } 
 
         if (!Physics.Raycast(transform.position, fwd, increasedRayDistance, mask)) {
             Debug.DrawRay(transform.position, fwd * increasedRayDistance, Color.green);
+            transform.localRotation = Quaternion.Lerp(transform.rotation, avoidDirection, rotationSpeed * 1.25f * Time.deltaTime);
+            heading = Quaternion.Euler(0f, transform.eulerAngles.y + 90f, 0f);
+            lastRestCheck = Time.time;
+            lastDirectionChangeTime = Time.time;
             SetState(Swimming);
         }
     }
