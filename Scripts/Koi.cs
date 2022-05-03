@@ -16,7 +16,7 @@ public class Koi : UdonSharpBehaviour
 
     public GameObject target;
     private Food _foodTarget;
-    private Koi _koiTarget;
+    public Koi _koiTarget;
 
     [UdonSynced] public float speed = 0.0f;
     public float fishSpeedIncrement = 0.1f;
@@ -27,10 +27,10 @@ public class Koi : UdonSharpBehaviour
     public float fishSizeMax = 0.07f;
     public float _fishSize = 0.03f;
 
-    public AudioSource audioPlayerBonk;
-    public AudioSource audioEatObject;
     public AudioSource audioMakeOffspring;
-    public AudioSource audioHittingWater;
+
+    public ParticleSystem particleHearts;
+
     // Color Values
     [UdonSynced] public float r = 0f, g = 0f, b = 0f;
     [UdonSynced] public float r2 = 0f, g2 = 0f, b2 = 0f;
@@ -445,7 +445,8 @@ public class Koi : UdonSharpBehaviour
         foreach (var hitCollider in hitColliders) {
             if (hitCollider.gameObject == this.gameObject) return;
             Koi foundKoi = hitCollider.gameObject.GetComponent<Koi>();
-            if (foundKoi.desireOffspring == true && foundKoi.target == null) {
+            if (foundKoi == null) return;
+            if (foundKoi.currentState != OutOfWater && foundKoi.desireOffspring == true && foundKoi.target == null) {
                 foundKoi.SetTargetFish(gameObject);
                 SetTarget(foundKoi.gameObject);
                 _koiTarget = foundKoi;
@@ -480,6 +481,12 @@ public class Koi : UdonSharpBehaviour
 
     private void OnTriggerExit(Collider collider) {
         if (Time.time > lastOutOfWaterTime + outOfWaterInterval && collider.gameObject.name == "Water") {
+            float audioPitch = Random.Range(0.6f, 0.9f);
+            _audioManager.PlayOnce(_audioManager.audioSplash, gameObject, audioPitch);
+            if (Networking.IsOwner(Networking.LocalPlayer, gameObject)) {
+                if (currentState == SeekingMate) {
+                    ResetFromSeekingMate();
+                }
                 SetState(OutOfWater);
                 target = null;
                 sync.SetGravity(true);
@@ -502,14 +509,14 @@ public class Koi : UdonSharpBehaviour
         }
 
         if (Time.time > lastOutOfWaterTime + outOfWaterInterval && collider.gameObject.name == "Water") {
+            float audioPitch = Random.Range(1.0f, 1.2f);
+            _audioManager.PlayOnce(_audioManager.audioSplash, gameObject, audioPitch);
             SetState(Swimming);
-            sync.SetGravity(false);
             sync.SetKinematic(true);
             sync.SetGravity(false);
             lastRestCheck = Time.time;
             lastOutOfWaterTime = Time.time;
             //_propBlock.SetFloat("_Speed", 5f); // Not working
-            gameObject.transform.position += new Vector3(0f, 0f, 0f);
         }
 
         if (collider.gameObject.name == "Food") {
@@ -521,22 +528,24 @@ public class Koi : UdonSharpBehaviour
         if (collider.gameObject.name  == "vPill"  && fishSize >= fishSizeMax-fishSizeIncrement) {
             EatPill(collider.gameObject);
             desireOffspring = true;
+            particleHearts.Play();
         }
     }
 
     private void EatPill(GameObject pill) {
         _food = pill.gameObject.GetComponent<Food>();
-        audioEatObject.pitch = Random.Range(1f, 1.2f);
-        audioEatObject.Play();
+        float audioPitch = Random.Range(1.0f, 1.2f);
+        _audioManager.PlayOnce(_audioManager.audioEat, gameObject, audioPitch);
         desireOffspring = true;
+        particleHearts.Play();
         RespawnFood(_food);
         RequestSerialization();
     }
 
     private void EatFood(GameObject food) {
         if (Networking.IsOwner(Networking.LocalPlayer, gameObject)) {
-            audioEatObject.pitch = Random.Range(1f, 1.2f);
-            audioEatObject.Play();
+            float audioPitch = Random.Range(1.0f, 1.2f);
+            _audioManager.PlayOnce(_audioManager.audioEat, gameObject, audioPitch);
             if (fishSize < fishSizeMax) {
                 _food = food.gameObject.GetComponent<Food>();
                 RespawnFood(_food);
