@@ -19,13 +19,13 @@ public class Koi : UdonSharpBehaviour
     private Koi _koiTarget;
 
     [UdonSynced] public float speed = 0.0f;
-    public float fishSpeedIncrement = 0.2f;
+    public float fishSpeedIncrement = 0.1f;
     private float _speed = 0.0f;
 
     [UdonSynced] public float fishSize = 0.04f;
     public float fishSizeIncrement = 0.01f;
-    public float fishSizeMax = 0.08f;
-    public float _fishSize = 0.04f;
+    public float fishSizeMax = 0.07f;
+    public float _fishSize = 0.03f;
 
     public AudioSource audioPlayerBonk;
     public AudioSource audioEatObject;
@@ -41,6 +41,7 @@ public class Koi : UdonSharpBehaviour
     private float directionChangeInterval = 3.0f;
     private float restTime = 8f;
     private float restCheckTimer = 10f;
+    private float timeToProduceOffspring = 5f;
     private float outOfWaterInterval = 0.03f;
 
     // Timers
@@ -320,15 +321,14 @@ public class Koi : UdonSharpBehaviour
     }
 
     private void UpdateSeekingMate() {
-        if (_koiTarget.currentState == OutOfWater || target.activeSelf == false) {
-            startCreatingOffspring = 0;
-            target = null;
-            _koiTarget = null;
+
+        if (_koiTarget.currentState == OutOfWater || target.activeSelf == false || _koiTarget._koiTarget != this) {
+            ResetFromSeekingMate();
             SetState(Swimming);
+            return;
         }
 
         Quaternion lookAtLocation = Quaternion.LookRotation(target.transform.position - transform.position);
-
         transform.rotation = Quaternion.Slerp(transform.rotation, lookAtLocation, rotationSpeed * 3f * Time.deltaTime);
 
         if (Vector3.Distance(transform.position, target.transform.position) > 0.15f) {
@@ -341,13 +341,17 @@ public class Koi : UdonSharpBehaviour
 
         } else {
             if (startCreatingOffspring == 0) {
-                startCreatingOffspring = Time.time;
-            } else {
-                if (Time.time > startCreatingOffspring + timeToProduceOffspring) {
-                    Procreate();
-               }
+                if (createsOffspring == true) {
+                    audioMakeOffspring = _audioManager.GetAudio(_audioManager.audioMakingOffspring, gameObject);
+                    if (audioMakeOffspring != null) audioMakeOffspring.Play();
+                    startCreatingOffspring = Time.time;
+                }
+            } else if (Time.time > startCreatingOffspring + timeToProduceOffspring) {
+                Procreate();
             }
-            // stop transform.position
+            // Do Nothing
+        }
+    }
         }
     }
 
