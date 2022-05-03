@@ -358,11 +358,19 @@ public class Koi : UdonSharpBehaviour
     public void Procreate() {
         if (createsOffspring == true) {
             GameObject newFish = _fishSpawner.availableObjects.TryToSpawn();
-            newFish.transform.position = transform.position;
-            if (newFish == null) return;
-            Koi newKoi = newFish.GetComponent<Koi>();
-            newKoi.CreateKoiFromParents(this, _koiTarget, InWater);
+            if (newFish == null) {
+                _koiTarget.ResetFromProcreate();
+                ResetFromProcreate();
+                return;
+            } else {
+                newFish.transform.position = transform.position + Vector3.forward * 0.075f;
+                Koi newKoi = newFish.GetComponent<Koi>();
+                newKoi.CreateKoiFromParents(this, _koiTarget, InWater);
+                _koiTarget.ResetFromProcreate();
+                ResetFromProcreate();
+            }
         }
+    }
         desireOffspring = false;
         target = null;
         _koiTarget = null;
