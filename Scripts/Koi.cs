@@ -249,14 +249,36 @@ public class Koi : UdonSharpBehaviour
         }
     }
 
+    private void CheckLeftFirst() {
+        Vector3 left = transform.TransformDirection(Vector3.left);
+
+        // If left raycast is not hitting a wall than rotate left
+        if (!Physics.Raycast(transform.position, left, rayDistance, mask)) {
+            SetState(AvoidingLeft);
+        } else {
+            SetState(AvoidingRight);
+        }
+    }
+
+    private void CheckRightFirst() {
+        Vector3 right = transform.TransformDirection(Vector3.right);
+
+        // If right raycast is not hitting a wall than rotate right
+        if (!Physics.Raycast(transform.position, right, rayDistance, mask)) {
+            SetState(AvoidingRight);
+        } else {
+            SetState(AvoidingLeft);
+        }
+    }
+
     private void UpdateResting() {
         if (Time.time > restTime + startRestTime) {
             float roll = Random.Range(0f, 1f);
             
             if (roll >= 0.50f) {
-                SetState(AvoidingLeft);
+                CheckLeftFirst();
             } else {
-                SetState(AvoidingRight);
+                CheckRightFirst();
             }
         }
     }
