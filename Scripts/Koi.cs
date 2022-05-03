@@ -352,6 +352,16 @@ public class Koi : UdonSharpBehaviour
             // Do Nothing
         }
     }
+
+    public void ResetFromSeekingMate() {
+        startCreatingOffspring = 0;
+        createsOffspring = false;
+        target = null;
+        _koiTarget = null;
+        if (audioMakeOffspring != null)
+        {
+            audioMakeOffspring.Stop();
+            audioMakeOffspring = null;
         }
     }
 
